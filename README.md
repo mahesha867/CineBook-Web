@@ -118,7 +118,7 @@ mysql -u root -p < database/03_views_procs_triggers.sql
 - **Triggers (2)**: `trg_after_booking_insert`, `trg_after_booking_cancel`.
 - **Scheduled Event (1)**: `evt_clean_expired_seat_holds` (runs every 1 minute).
 
-Detailed ER Diagram available at [docs/ER_DIAGRAM.md](docs/ER_DIAGRAM.md).
+Detailed ER Diagram and relational schema available at [docs/DBMS.md](docs/DBMS.md).
 
 ---
 
@@ -150,7 +150,7 @@ cd backend
 - **My Tickets**: [http://localhost:8080/my-tickets.html](http://localhost:8080/my-tickets.html)
 - **Admin Portal**: [http://localhost:8080/admin.html](http://localhost:8080/admin.html) *(Credentials: `admin` / `admin123`)*
 
-> 📖 **Production Deployment Guide**: For full instructions on deploying CineBook Web with Docker Compose, Render + Aiven, Railway, or Linux Systemd, see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+> 📖 **System Architecture & Deployment Guide**: For details on multi-tier architecture, sequence diagrams, and Docker containerization, see [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ---
 
@@ -181,12 +181,24 @@ cd backend
 
 ---
 
-## 📚 Academic Viva Preparation Guide
+## 📚 Project Presentation & Viva Preparation Guides
 
-A dedicated viva guide has been compiled to assist students during practical examinations:
-👉 **[docs/VIVA_QA.md](docs/VIVA_QA.md)**
+Comprehensive documentation modules have been created in `/docs` specifically structured for project presentation and academic viva defense:
 
-Covers:
-- **OOP**: Encapsulation, Abstraction, Inheritance, Polymorphism, Immutability, Design Patterns, Enums, Custom Exceptions.
-- **DBMS**: Normalization (1NF, 2NF, 3NF), ACID Properties, Transaction Isolation Levels, Deadlock Prevention, Stored Procedures, Views, Triggers, Events, and B+Tree Indexing.
+1. 🏛️ **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** — **Entire Project Structure & Architecture**:
+   - Multi-tier system architecture (Presentation, REST Controller, Service, DAO, and MySQL InnoDB).
+   - End-to-end dataflow sequence diagrams and component interactions.
+   - Concurrency & deadlock prevention model (eliminating circular wait).
+   - Cloud deployment topology (Render Docker container + Aiven MySQL 8 cluster over TLS).
 
+2. ☕ **[docs/JAVA.md](docs/JAVA.md)** — **Object-Oriented Programming (OOP) in Java 21**:
+   - Comprehensive implementation of the **4 Pillars of OOP**: Abstraction (`Bookable`), Encapsulation, Inheritance, and Polymorphism (`PricingEngine`).
+   - Software Design Patterns: Strategy Pattern, DAO Pattern, Chain of Responsibility, Factory, and Value Objects.
+   - Rich Domain Logic: Behavior-rich `SeatType` enum and custom domain exception hierarchy.
+   - Concurrency handling and curated Java OOP viva defense questions & answers.
+
+3. 🐬 **[docs/DBMS.md](docs/DBMS.md)** — **Database Management Systems (DBMS in MySQL 8)**:
+   - Full 15-table Relational Entity-Relationship (ER) diagram with cardinality.
+   - Mathematical justification of Database Normalization (1NF, 2NF, 3NF) and historical price preservation.
+   - Advanced database features: Stored Procedures (`sp_cancel_booking` for 80% refunds), Analytical Views with Window Functions (`v_top_selling_snacks` using `DENSE_RANK()`), Audit Triggers with JSON snapshots, and Scheduled Events.
+   - Curated DBMS viva defense questions & answers.
