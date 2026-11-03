@@ -3,11 +3,23 @@
 > **A Production-Quality Cinema Reservation & Concessions Platform**  
 > *Developed for 2nd-Year B.E. Computer Science & Engineering (OOP using Java + Database Management Systems)*
 
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-cinebook--web--qo78.onrender.com-46E3B7?style=for-the-badge&logo=render&logoColor=white)](https://cinebook-web-qo78.onrender.com)
+
 [![Java 21](https://img.shields.io/badge/Java-21-orange.svg)](https://www.oracle.com/java/)
 [![Spring Boot 3](https://img.shields.io/badge/Spring%20Boot-3.3.4-brightgreen.svg)](https://spring.io/projects/spring-boot)
 [![MySQL 8](https://img.shields.io/badge/MySQL-8.0%20(InnoDB)-blue.svg)](https://www.mysql.com/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Build Status](https://img.shields.io/badge/Tests-12%20Passed%20(100%25)-success.svg)]()
+
+---
+
+## 🌐 Live Production Deployment
+
+CineBook Web is actively deployed in production on **Render** (Docker containerized Spring Boot 3) connected to an **Aiven Cloud MySQL 8.0** cluster:
+
+- 🎟️ **Customer Reservation Portal**: [https://cinebook-web-qo78.onrender.com](https://cinebook-web-qo78.onrender.com)
+- 🎫 **My Tickets & Refund Center**: [https://cinebook-web-qo78.onrender.com/my-tickets.html](https://cinebook-web-qo78.onrender.com/my-tickets.html)
+- 📊 **Executive Analytics Dashboard**: [https://cinebook-web-qo78.onrender.com/admin.html](https://cinebook-web-qo78.onrender.com/admin.html) *(Credentials: `admin` / `admin123`)*
 
 ---
 
@@ -126,10 +138,19 @@ cd backend
 ```
 *(On Windows PowerShell, run `.\mvnw.cmd spring-boot:run`)*
 
-Access the application in your browser:
+### Access the Application:
+
+#### 🌐 Live Cloud (Render):
+- **Customer Reservation Portal**: [https://cinebook-web-qo78.onrender.com](https://cinebook-web-qo78.onrender.com)
+- **My Tickets & Refund Center**: [https://cinebook-web-qo78.onrender.com/my-tickets.html](https://cinebook-web-qo78.onrender.com/my-tickets.html)
+- **Admin Analytics Dashboard**: [https://cinebook-web-qo78.onrender.com/admin.html](https://cinebook-web-qo78.onrender.com/admin.html) *(Credentials: `admin` / `admin123`)*
+
+#### 💻 Local Development:
 - **Customer Portal**: [http://localhost:8080](http://localhost:8080)
 - **My Tickets**: [http://localhost:8080/my-tickets.html](http://localhost:8080/my-tickets.html)
 - **Admin Portal**: [http://localhost:8080/admin.html](http://localhost:8080/admin.html) *(Credentials: `admin` / `admin123`)*
+
+> 📖 **Production Deployment Guide**: For full instructions on deploying CineBook Web with Docker Compose, Render + Aiven, Railway, or Linux Systemd, see [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ---
 
