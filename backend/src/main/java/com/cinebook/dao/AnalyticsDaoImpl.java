@@ -1,0 +1,85 @@
+package com.cinebook.dao;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Repository;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Plain JDBC Implementation of AnalyticsDao querying custom MySQL Views and Window Functions.
+ */
+@Repository
+public class AnalyticsDaoImpl implements AnalyticsDao {
+
+    private final JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    public AnalyticsDaoImpl(JdbcTemplate jdbcTemplate) {
+        this.jdbcTemplate = jdbcTemplate;
+    }
+
+    @Override
+    public Map<String, Object> getKpiSummary() {
+        String sql = """
+            SELECT 
+                COUNT(*) AS total_bookings,
+                SUM(CASE WHEN status = 'CONFIRMED' THEN 1 ELSE 0 END) AS confirmed_bookings,
+                SUM(CASE WHEN status = 'CANCELLED' THEN 1 ELSE 0 END) AS cancelled_bookings,
+                COALESCE(SUM(CASE WHEN status = 'CONFIRMED' THEN final_total ELSE (final_total - refund_amount) END), 0.00) AS net_revenue,
+                COALESCE(SUM(ticket_subtotal - ticket_discount), 0.00) AS total_ticket_revenue,
+                COALESCE(SUM(snack_subtotal), 0.00) AS total_snack_revenue,
+                COALESCE(SUM(refund_amount), 0.00) AS total_refunds_issued
+            FROM bookings
+        """;
+        Map<String, Object> map = jdbcTemplate.queryForMap(sql);
+        Map<String, Object> result = new HashMap<>(map);
+
+        // Compute overall cinema occupancy percentage
+        Double avgOccupancy = jdbcTemplate.queryForObject(
+                "SELECT COALESCE(AVG(occupancy_percent), 0.0) FROM v_show_occupancy", 
+                Double.class
+        );
+        result.put("average_occupancy_percent", avgOccupancy != null ? avgOccupancy : 0.0);
+
+        return result;
+    }
+
+    @Override
+    public List<Map<String, Object>> getMovieRevenueStats() {
+        // Querying Database View: v_movie_revenue_analytics
+        String sql = "SELECT * FROM v_movie_revenue_analytics ORDER BY net_revenue DESC";
+        return jdbcTemplate.queryForList(sql);
+    }
+
+    @Override
+    public List<Map<String, Object>> getShowOccupancyStats() {
+        // Querying Database View: v_show_occupancy
+        String sql = "SELECT * FROM v_show_occupancy ORDER BY show_time ASC";
+        return jdbcTemplate.queryForList(sql);
+    }
+
+    @Override
+    public List<Map<String, Object>> getTopSellingSnacks() {
+        // Querying Database View: v_top_selling_snacks (utilizing SQL window function DENSE_RANK())
+        String sql = "SELECT * FROM v_top_selling_snacks ORDER BY revenue_rank ASC, total_quantity_sold DESC";
+        return jdbcTemplate.queryForList(sql);
+    }
+
+    @Override
+    public List<Map<String, Object>> getPeakBookingHours() {
+        String sql = """
+            SELECT 
+                HOUR(booking_time) AS booking_hour,
+                COUNT(*) AS total_bookings,
+                SUM(final_total) AS hourly_revenue
+            FROM bookings
+            GROUP BY HOUR(booking_time)
+            ORDER BY booking_hour ASC
+        """;
+        return jdbcTemplate.queryForList(sql);
+    }
+}
+

@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CineBook Web — Gourmet Concessions</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <header class="navbar">
+    <a href="/" class="nav-brand"><span class="brand-icon">🎬</span> CineBook Web</a>
+    <nav>
+      <ul class="nav-links">
+        <li><a href="/" class="nav-link">Movies</a></li>
+        <li><a href="/my-tickets.html" class="nav-link">My Tickets</a></li>
+        <li><a href="/admin.html" class="nav-link admin-btn">Admin Portal</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main class="container">
+    <div style="margin-bottom: 1.5rem;">
+      <a href="javascript:history.back()" style="color: var(--text-secondary); text-decoration: none; font-size: 0.9rem;">&larr; Back to Seat Map</a>
+      <h1 style="font-size: 1.8rem; margin: 0.35rem 0; color: #fff;">Cinema Concessions &amp; Snacks</h1>
+      <p style="color: var(--text-secondary); font-size: 0.95rem;">Enhance your screening with chef-crafted snacks and ice-cold refreshments.</p>
+    </div>
+
+    <!-- Category Tabs -->
+    <div class="genre-pills" style="margin-bottom: 1.5rem;">
+      <button class="genre-pill active" data-cat="ALL">All Items</button>
+      <button class="genre-pill" data-cat="FOOD">🍿 Food &amp; Combos</button>
+      <button class="genre-pill" data-cat="BEVERAGE">🥤 Beverages &amp; Cold Drinks</button>
+    </div>
+
+    <!-- Layout: Snack Grid + Live Tray Cart -->
+    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem; align-items: flex-start;" id="snackLayout">
+      <!-- Snack Cards Grid -->
+      <div class="snack-grid" id="snackGrid" style="margin-top: 0;">
+        <div style="color: var(--text-muted); padding: 2rem;">Loading delicious concessions...</div>
+      </div>
+
+      <!-- Live Concession Tray Summary -->
+      <div class="breakdown-card" style="position: sticky; top: 90px;">
+        <h3 style="margin-bottom: 1rem; font-size: 1.2rem; color: #fff; display: flex; align-items: center; gap: 0.5rem;">
+          <span>🍿</span> Your Snack Tray
+        </h3>
+
+        <div id="trayItems" style="margin-bottom: 1rem; max-height: 240px; overflow-y: auto;">
+          <div style="color: var(--text-muted); font-size: 0.9rem; text-align: center; padding: 1.5rem 0;">No snacks added yet.</div>
+        </div>
+
+        <div class="breakdown-row total-row">
+          <span>Snack Subtotal</span>
+          <span id="trayTotalDisplay" style="color: var(--accent-gold);">Rs. 0.00</span>
+        </div>
+
+        <div style="margin-top: 1.5rem; display: flex; flex-direction: column; gap: 0.75rem;">
+          <button class="btn btn-primary" id="proceedCheckoutBtn">
+            Proceed to Checkout &rarr;
+          </button>
+          <button class="btn btn-secondary" id="skipSnacksBtn" style="font-size: 0.85rem;">
+            Skip Snacks (Tickets Only)
+          </button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="/js/app.js"></script>
+  <script>
+    const bookingState = CineBook.getBookingState();
+    if (!bookingState.showId || !bookingState.seatIds || bookingState.seatIds.length === 0) {
+      alert("No active seat selection found. Returning to movie selection.");
+      window.location.href = "/";
+    }
+
+    let allSnacks = [];
+    const quantities = new Map(); // snackId -> int
+
+    // Pre-populate quantities from state if present
+    if (bookingState.snackOrders) {
+      Object.entries(bookingState.snackOrders).forEach(([id, qty]) => {
+        if (qty > 0) quantities.set(id, qty);
+      });
+    }
+
+    async function loadSnacks() {
+      try {
+        const resp = await CineBook.fetchApi('/api/snacks');
+        allSnacks = resp.data || [];
+        renderSnacks(allSnacks);
+        updateTrayDisplay();
+      } catch (err) {
+        document.getElementById('snackGrid').innerHTML = `<p style="color: var(--accent-rose);">Failed to load snacks: ${err.message}</p>`;
+      }
+    }
+
+    function renderSnacks(snacks) {
+      const grid = document.getElementById('snackGrid');
+      if (snacks.length === 0) {
+        grid.innerHTML = '<p style="color: var(--text-muted); padding: 2rem;">No items in this category.</p>';
+        return;
+      }
+
+      grid.innerHTML = snacks.map(sn => {
+        const qty = quantities.get(sn.snackId) || 0;
+        const icon = sn.category === 'BEVERAGE' ? '🥤' : '🍿';
+
+        return `
+          <div class="snack-card">
+            <div>
+              <div style="font-size: 1.5rem; margin-bottom: 0.5rem;">${icon}</div>
+              <h4 style="color: #fff; font-size: 1.05rem; margin-bottom: 0.25rem;">${sn.name}</h4>
+              <div style="font-size: 0.8rem; color: var(--text-secondary);">${sn.snackId} &bull; ${sn.category}</div>
+            </div>
+            <div>
+              <div style="font-size: 1.15rem; font-weight: 700; color: var(--accent-gold); margin-top: 0.75rem;">
+                ${CineBook.formatCurrency(sn.price)}
+              </div>
+              <div class="snack-qty-control">
+                <button class="qty-btn" onclick="updateQty('${sn.snackId}', -1)">&minus;</button>
+                <span class="qty-display" id="qty_${sn.snackId}">${qty}</span>
+                <button class="qty-btn" onclick="updateQty('${sn.snackId}', 1)">&plus;</button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function updateQty(snackId, delta) {
+      const current = quantities.get(snackId) || 0;
+      const next = Math.max(0, current + delta);
+      if (next === 0) {
+        quantities.delete(snackId);
+      } else {
+        quantities.set(snackId, next);
+      }
+
+      const display = document.getElementById(`qty_${snackId}`);
+      if (display) display.textContent = next;
+
+      updateTrayDisplay();
+    }
+
+    function updateTrayDisplay() {
+      const trayContainer = document.getElementById('trayItems');
+      const totalEl = document.getElementById('trayTotalDisplay');
+
+      if (quantities.size === 0) {
+        trayContainer.innerHTML = '<div style="color: var(--text-muted); font-size: 0.9rem; text-align: center; padding: 1.5rem 0;">No snacks added yet.</div>';
+        totalEl.textContent = 'Rs. 0.00';
+        return;
+      }
+
+      let grandSnackSubtotal = 0;
+      const rows = [];
+
+      quantities.forEach((qty, id) => {
+        const sn = allSnacks.find(item => item.snackId === id);
+        if (sn) {
+          const itemTotal = Number(sn.price) * qty;
+          grandSnackSubtotal += itemTotal;
+          rows.push(`
+            <div class="breakdown-row" style="font-size: 0.85rem;">
+              <span>${sn.name} &times; ${qty}</span>
+              <span style="font-weight: 600;">${CineBook.formatCurrency(itemTotal)}</span>
+            </div>
+          `);
+        }
+      });
+
+      trayContainer.innerHTML = rows.join('');
+      totalEl.textContent = CineBook.formatCurrency(grandSnackSubtotal);
+    }
+
+    // Category filter
+    document.querySelectorAll('.genre-pill').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        document.querySelectorAll('.genre-pill').forEach(b => b.classList.remove('active'));
+        e.target.classList.add('active');
+        const cat = e.target.dataset.cat;
+        const filtered = (cat === 'ALL') ? allSnacks : allSnacks.filter(s => s.category === cat);
+        renderSnacks(filtered);
+      });
+    });
+
+    function saveAndProceed() {
+      const orders = {};
+      quantities.forEach((qty, id) => {
+        if (qty > 0) orders[id] = qty;
+      });
+      bookingState.snackOrders = orders;
+      CineBook.saveBookingState(bookingState);
+      window.location.href = '/checkout.html';
+    }
+
+    document.getElementById('proceedCheckoutBtn').addEventListener('click', saveAndProceed);
+    document.getElementById('skipSnacksBtn').addEventListener('click', () => {
+      quantities.clear();
+      saveAndProceed();
+    });
+
+    loadSnacks();
+  </script>
+</body>
+</html>
+

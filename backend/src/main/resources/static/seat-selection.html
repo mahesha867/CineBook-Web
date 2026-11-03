@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CineBook Web — Interactive Seat Selection</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <header class="navbar">
+    <a href="/" class="nav-brand"><span class="brand-icon">🎬</span> CineBook Web</a>
+    <nav>
+      <ul class="nav-links">
+        <li><a href="/" class="nav-link">Movies</a></li>
+        <li><a href="/my-tickets.html" class="nav-link">My Tickets</a></li>
+        <li><a href="/admin.html" class="nav-link admin-btn">Admin Portal</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main class="container">
+    <!-- Header with Movie & Screening Info -->
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
+      <div>
+        <a href="/" style="color: var(--text-secondary); text-decoration: none; font-size: 0.9rem;">&larr; Back to Movies</a>
+        <h1 id="movieTitleDisplay" style="font-size: 1.8rem; margin: 0.35rem 0; color: #fff;">Select Your Seats</h1>
+        <div id="showMetaDisplay" style="color: var(--text-secondary); font-size: 0.95rem;">Loading screening info...</div>
+      </div>
+      <div style="display: flex; gap: 0.75rem;">
+        <button class="btn btn-secondary" id="bestSeatsBtn">
+          🎯 Find Best Seats
+        </button>
+        <button class="btn btn-secondary" id="refreshBtn" title="Refresh Seat Matrix">
+          🔄 Refresh
+        </button>
+      </div>
+    </div>
+
+    <!-- Active 5-minute Seat Hold Banner -->
+    <div class="hold-timer-banner" id="holdBanner" style="display: none;">
+      <div>
+        <strong style="color: var(--accent-gold);">⚡ Smart Seat Hold Active:</strong>
+        <span style="font-size: 0.9rem; color: var(--text-primary); margin-left: 0.5rem;">Your selected seats are temporarily reserved for you.</span>
+      </div>
+      <div class="timer-countdown" id="timerDisplay">05:00</div>
+    </div>
+
+    <!-- Curved Cinema Screen -->
+    <div class="screen-container">
+      <div class="screen-curved"></div>
+      <div class="screen-label">AUDITORIUM SCREEN</div>
+    </div>
+
+    <!-- Interactive Seat Grid -->
+    <div class="seat-map-wrapper">
+      <div class="seat-grid" id="seatGrid">
+        <div style="padding: 2rem; color: var(--text-muted); text-align: center;">Rendering auditorium seating layout...</div>
+      </div>
+    </div>
+
+    <!-- Legend -->
+    <div class="seat-legend">
+      <div class="legend-item"><div class="legend-swatch" style="background: #1e293b; border: 1px solid var(--accent-cyan);"></div> Regular (Rs. 150)</div>
+      <div class="legend-item"><div class="legend-swatch" style="background: #231d38; border: 1px solid var(--accent-purple);"></div> Premium (Rs. 250)</div>
+      <div class="legend-item"><div class="legend-swatch" style="background: #2d2310; border: 1px solid var(--accent-gold);"></div> VIP Recliner (Rs. 400)</div>
+      <div class="legend-item"><div class="legend-swatch" style="background: var(--accent-cyan);"></div> Selected</div>
+      <div class="legend-item"><div class="legend-swatch" style="background: var(--seat-held);"></div> Held (5m lock)</div>
+      <div class="legend-item"><div class="legend-swatch" style="background: #0f172a; border: 1px solid #1e293b;"></div> Booked</div>
+    </div>
+
+    <!-- Selection Summary Footer Card -->
+    <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.25rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-top: 2rem;">
+      <div>
+        <div style="font-size: 0.85rem; color: var(--text-secondary);">Selected Seats:</div>
+        <div id="selectedSeatsLabel" style="font-size: 1.15rem; font-weight: 700; color: #fff;">None selected</div>
+      </div>
+      <div style="text-align: right;">
+        <div style="font-size: 0.85rem; color: var(--text-secondary);">Ticket Subtotal (Estimate):</div>
+        <div id="subtotalDisplay" style="font-size: 1.35rem; font-weight: 800; color: var(--accent-cyan);">Rs. 0.00</div>
+      </div>
+      <div>
+        <button class="btn btn-primary" id="proceedBtn" disabled>
+          Proceed to Snacks &rarr;
+        </button>
+      </div>
+    </div>
+
+    <!-- Sold Out / Waitlist Banner (Hidden by default) -->
+    <div id="soldOutBanner" style="display: none; margin-top: 1.5rem; background: rgba(244, 63, 94, 0.15); border: 1px solid var(--accent-rose); border-radius: var(--radius-md); padding: 1.25rem; text-align: center;">
+      <h3 style="color: var(--accent-rose); margin-bottom: 0.5rem;">This Screening is Currently Sold Out</h3>
+      <p style="color: var(--text-secondary); margin-bottom: 1rem;">Join the automated waitlist to be automatically promoted when bookings are cancelled.</p>
+      <a id="joinWaitlistBtn" href="#" class="btn btn-secondary">Join Waitlist Queue &rarr;</a>
+    </div>
+  </main>
+
+  <!-- Best Seat Recommender Modal (Strategy Pattern Showcase) -->
+  <div class="modal-overlay" id="recommendModal">
+    <div class="modal-content">
+      <button class="modal-close" id="recommendModalClose">&times;</button>
+      <h2 style="font-size: 1.4rem; margin-bottom: 0.5rem; color: #fff;">Find Best Adjacent Seats</h2>
+      <p style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 1.5rem;">Our backend algorithm evaluates optimal screen viewing angles and contiguous blocks.</p>
+
+      <div style="display: flex; flex-direction: column; gap: 1.25rem;">
+        <div>
+          <label style="display: block; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.35rem;">Number of Adjacent Seats</label>
+          <input type="number" id="recCount" min="1" max="8" value="2" class="search-input" style="width: 100%;">
+        </div>
+
+        <div>
+          <label style="display: block; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.35rem;">Seating Tier Preference</label>
+          <select id="recTier" class="search-input" style="width: 100%; cursor: pointer;">
+            <option value="ANY">Any Tier (Optimal Center)</option>
+            <option value="VIP">VIP (Recliners, Row E)</option>
+            <option value="PREMIUM">Premium (Rows C-D)</option>
+            <option value="REGULAR">Regular (Rows A-B)</option>
+          </select>
+        </div>
+
+        <div>
+          <label style="display: block; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.35rem;">Recommendation Strategy (OOP Pattern)</label>
+          <select id="recStrategy" class="search-input" style="width: 100%; cursor: pointer;">
+            <option value="CENTER">Center-First Strategy (Optimal Viewing Angle)</option>
+            <option value="TIER_OPTIMIZED">Tier-Optimized Strategy (Strict Tier Match First)</option>
+          </select>
+        </div>
+
+        <button class="btn btn-gold" id="runRecommendBtn" style="width: 100%; margin-top: 0.5rem;">
+          Find &amp; Hold Seats
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/app.js"></script>
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const showId = parseInt(urlParams.get('showId'), 10);
+    const sessionId = CineBook.getSessionId();
+
+    let selectedSeats = new Map(); // seatId -> { seatId, seatCode, price, tier }
+    let holdTimerInterval = null;
+    let holdExpiresAt = null;
+    let pollInterval = null;
+
+    if (!showId) {
+      alert("Invalid show selection. Redirecting to movies.");
+      window.location.href = "/";
+    }
+
+    async function loadSeatMap() {
+      try {
+        const resp = await CineBook.fetchApi(`/api/shows/${showId}/seats?sessionId=${sessionId}`);
+        const data = resp.data;
+        
+        document.getElementById('movieTitleDisplay').textContent = data.movieTitle;
+        document.getElementById('showMetaDisplay').innerHTML = `
+          <span>🖥 ${data.screenName}</span> &bull; 
+          <span>📅 ${CineBook.formatDateTime(data.showTime)}</span> &bull; 
+          <span style="color: ${data.occupancyPercent > 80 ? 'var(--accent-rose)' : 'var(--accent-cyan)'}; font-weight: 600;">
+            ${data.occupancyPercent}% Occupancy (${data.bookedSeatsCount}/${data.totalCapacity} Booked)
+          </span>
+        `;
+
+        if (data.bookedSeatsCount >= data.totalCapacity) {
+          document.getElementById('soldOutBanner').style.display = 'block';
+          document.getElementById('joinWaitlistBtn').href = `/waitlist.html?showId=${showId}`;
+        } else {
+          document.getElementById('soldOutBanner').style.display = 'none';
+        }
+
+        renderSeatGrid(data.seats);
+      } catch (err) {
+        CineBook.showToast("Failed to update seat map: " + err.message, "error");
+      }
+    }
+
+    function renderSeatGrid(seats) {
+      const grid = document.getElementById('seatGrid');
+      grid.innerHTML = '';
+
+      // Group seats by row
+      const byRow = {};
+      seats.forEach(s => {
+        if (!byRow[s.rowChar]) byRow[s.rowChar] = [];
+        byRow[s.rowChar].push(s);
+      });
+
+      // Sort rows A to E
+      const sortedRows = Object.keys(byRow).sort();
+
+      sortedRows.forEach(rowChar => {
+        const rowDiv = document.createElement('div');
+        rowDiv.className = 'seat-row';
+
+        const label = document.createElement('div');
+        label.className = 'row-label';
+        label.textContent = rowChar;
+        rowDiv.appendChild(label);
+
+        const rowSeats = byRow[rowChar].sort((a, b) => a.seatNum - b.seatNum);
+
+        rowSeats.forEach(seat => {
+          const seatEl = document.createElement('div');
+          const isSelected = selectedSeats.has(seat.seatId);
+
+          let tierClass = 'tier-regular';
+          if (seat.tier === 'PREMIUM') tierClass = 'tier-premium';
+          else if (seat.tier === 'VIP') tierClass = 'tier-vip';
+
+          let statusClass = 'available';
+          if (seat.status === 'BOOKED') statusClass = 'booked';
+          else if (seat.status === 'HELD') statusClass = 'held';
+          else if (seat.status === 'HELD_BY_YOU') statusClass = 'held-by-you';
+
+          seatEl.className = `seat ${tierClass} ${statusClass} ${isSelected ? 'selected' : ''}`;
+          seatEl.textContent = seat.seatNum;
+          seatEl.title = `Seat ${seat.seatCode} (${seat.tier}) - Rs. ${seat.basePrice}`;
+
+          if (seat.status === 'AVAILABLE' || seat.status === 'HELD_BY_YOU') {
+            seatEl.addEventListener('click', () => toggleSeatSelection(seat));
+          }
+
+          rowDiv.appendChild(seatEl);
+        });
+
+        grid.appendChild(rowDiv);
+      });
+    }
+
+    async function toggleSeatSelection(seat) {
+      if (selectedSeats.has(seat.seatId)) {
+        selectedSeats.delete(seat.seatId);
+        // Release hold for this seat
+        try {
+          await CineBook.fetchApi(`/api/shows/${showId}/release-holds`, {
+            method: 'POST',
+            body: JSON.stringify({ seatIds: [seat.seatId], sessionId })
+          });
+        } catch (e) { console.warn(e); }
+      } else {
+        selectedSeats.set(seat.seatId, {
+          seatId: seat.seatId,
+          seatCode: seat.seatCode,
+          price: seat.basePrice,
+          tier: seat.tier
+        });
+        // Request 5-minute hold on backend
+        try {
+          await CineBook.fetchApi(`/api/shows/${showId}/hold-seats`, {
+            method: 'POST',
+            body: JSON.stringify({ seatIds: [seat.seatId], sessionId })
+          });
+          startHoldTimer(300); // 5 minutes
+        } catch (err) {
+          selectedSeats.delete(seat.seatId);
+          CineBook.showToast(err.message, "error");
+          loadSeatMap();
+          return;
+        }
+      }
+
+      updateSummaryFooter();
+      loadSeatMap();
+    }
+
+    function updateSummaryFooter() {
+      const labels = Array.from(selectedSeats.values()).map(s => s.seatCode);
+      const total = Array.from(selectedSeats.values()).reduce((sum, s) => sum + Number(s.price), 0);
+
+      const labelEl = document.getElementById('selectedSeatsLabel');
+      const totalEl = document.getElementById('subtotalDisplay');
+      const proceedBtn = document.getElementById('proceedBtn');
+
+      if (labels.length > 0) {
+        labelEl.textContent = labels.join(', ');
+        totalEl.textContent = CineBook.formatCurrency(total);
+        proceedBtn.disabled = false;
+      } else {
+        labelEl.textContent = 'None selected';
+        totalEl.textContent = 'Rs. 0.00';
+        proceedBtn.disabled = true;
+        stopHoldTimer();
+      }
+    }
+
+    function startHoldTimer(durationSecs) {
+      clearInterval(holdTimerInterval);
+      holdExpiresAt = Date.now() + durationSecs * 1000;
+      document.getElementById('holdBanner').style.display = 'flex';
+
+      function tick() {
+        const remaining = Math.max(0, Math.floor((holdExpiresAt - Date.now()) / 1000));
+        const mins = Math.floor(remaining / 60);
+        const secs = remaining % 60;
+        document.getElementById('timerDisplay').textContent = 
+          `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+
+        if (remaining <= 0) {
+          clearInterval(holdTimerInterval);
+          selectedSeats.clear();
+          updateSummaryFooter();
+          document.getElementById('holdBanner').style.display = 'none';
+          CineBook.showToast("Your 5-minute seat hold has expired. Seats released.", "info");
+          loadSeatMap();
+        }
+      }
+
+      tick();
+      holdTimerInterval = setInterval(tick, 1000);
+    }
+
+    function stopHoldTimer() {
+      clearInterval(holdTimerInterval);
+      document.getElementById('holdBanner').style.display = 'none';
+    }
+
+    // Best Seat Recommender modal
+    document.getElementById('bestSeatsBtn').addEventListener('click', () => {
+      document.getElementById('recommendModal').classList.add('active');
+    });
+    document.getElementById('recommendModalClose').addEventListener('click', () => {
+      document.getElementById('recommendModal').classList.remove('active');
+    });
+
+    document.getElementById('runRecommendBtn').addEventListener('click', async () => {
+      const count = parseInt(document.getElementById('recCount').value, 10);
+      const preferredTier = document.getElementById('recTier').value;
+      const strategy = document.getElementById('recStrategy').value;
+
+      try {
+        const resp = await CineBook.fetchApi(`/api/shows/${showId}/recommend-seats`, {
+          method: 'POST',
+          body: JSON.stringify({ count, preferredTier, strategy })
+        });
+
+        const seats = resp.data || [];
+        if (seats.length === 0) {
+          CineBook.showToast(`No contiguous block of ${count} seats found for the requested strategy.`, "info");
+          return;
+        }
+
+        // Clear existing selections
+        selectedSeats.clear();
+        const idsToHold = seats.map(s => s.seatId);
+
+        // Hold newly recommended seats
+        await CineBook.fetchApi(`/api/shows/${showId}/hold-seats`, {
+          method: 'POST',
+          body: JSON.stringify({ seatIds: idsToHold, sessionId })
+        });
+
+        seats.forEach(s => {
+          selectedSeats.set(s.seatId, {
+            seatId: s.seatId,
+            seatCode: s.seatCode,
+            price: s.price,
+            tier: s.tier
+          });
+        });
+
+        document.getElementById('recommendModal').classList.remove('active');
+        startHoldTimer(300);
+        updateSummaryFooter();
+        loadSeatMap();
+        CineBook.showToast(`Found and held ${seats.length} optimal seats!`, "success");
+      } catch (err) {
+        CineBook.showToast(err.message, "error");
+      }
+    });
+
+    // Proceed to Snacks Button
+    document.getElementById('proceedBtn').addEventListener('click', () => {
+      if (selectedSeats.size === 0) return;
+      const state = CineBook.getBookingState();
+      state.showId = showId;
+      state.seatIds = Array.from(selectedSeats.keys());
+      state.seatLabels = Array.from(selectedSeats.values()).map(s => s.seatCode);
+      CineBook.saveBookingState(state);
+      window.location.href = '/snacks.html';
+    });
+
+    document.getElementById('refreshBtn').addEventListener('click', loadSeatMap);
+
+    // Initial load and background polling every 3 seconds
+    loadSeatMap();
+    pollInterval = setInterval(loadSeatMap, 3000);
+
+    window.addEventListener('beforeunload', () => {
+      clearInterval(pollInterval);
+      clearInterval(holdTimerInterval);
+    });
+  </script>
+</body>
+</html>
+

@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CineBook Web — Digital Movie Boarding Pass</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <style>
+    @media print {
+      body { background: #fff !important; color: #000 !important; }
+      .navbar, .btn-wrap, footer { display: none !important; }
+      .ticket-card { box-shadow: none !important; border: 2px solid #000 !important; max-width: 100% !important; }
+    }
+  </style>
+</head>
+<body>
+  <header class="navbar">
+    <a href="/" class="nav-brand"><span class="brand-icon">🎬</span> CineBook Web</a>
+    <nav>
+      <ul class="nav-links">
+        <li><a href="/" class="nav-link">Movies</a></li>
+        <li><a href="/my-tickets.html" class="nav-link active">My Tickets</a></li>
+        <li><a href="/admin.html" class="nav-link admin-btn">Admin Portal</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main class="container">
+    <div class="ticket-card" id="ticketCard">
+      <div class="ticket-header">
+        <div>
+          <span style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 2px; color: var(--text-muted); font-weight: 700;">DIGITAL MOVIE TICKET</span>
+          <h2 id="ticketBookingId" style="font-size: 1.6rem; color: #fff; font-weight: 800; margin-top: 0.2rem;">CB1000</h2>
+        </div>
+        <span class="badge badge-success" id="ticketStatusBadge">CONFIRMED</span>
+      </div>
+
+      <div class="ticket-body">
+        <h3 id="ticketMovieTitle" style="font-size: 1.4rem; color: #fff; margin-bottom: 0.25rem;">Movie Title</h3>
+        <p id="ticketShowMeta" style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.25rem;"></p>
+
+        <!-- QR Code -->
+        <div class="ticket-qr">
+          <img id="ticketQrImage" src="" alt="Ticket Verification QR Code" width="180" height="180">
+        </div>
+        <div style="text-align: center; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 1.25rem;">
+          Scan at usher entrance scanner for validation
+        </div>
+
+        <!-- Seats and Customer Details Grid -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; background: rgba(0,0,0,0.25); padding: 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); margin-bottom: 1.25rem;">
+          <div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Seats Reserved</div>
+            <div id="ticketSeatsList" style="font-size: 1.1rem; font-weight: 700; color: var(--accent-cyan); margin-top: 0.2rem;">-</div>
+          </div>
+          <div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Auditorium</div>
+            <div id="ticketScreenName" style="font-size: 1.05rem; font-weight: 600; color: #fff; margin-top: 0.2rem;">-</div>
+          </div>
+          <div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Booked By</div>
+            <div id="ticketCustomerName" style="font-size: 0.95rem; font-weight: 600; color: #fff; margin-top: 0.2rem;">-</div>
+          </div>
+          <div>
+            <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Phone / Email</div>
+            <div id="ticketCustomerContact" style="font-size: 0.85rem; color: var(--text-secondary); margin-top: 0.2rem;">-</div>
+          </div>
+        </div>
+
+        <!-- Concessions Section -->
+        <div id="ticketSnackSection" style="margin-bottom: 1.25rem; display: none;">
+          <div style="font-size: 0.85rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 0.5rem;">🍿 Concession Items:</div>
+          <div id="ticketSnackList" style="font-size: 0.85rem; color: var(--text-muted); display: flex; flex-direction: column; gap: 0.25rem;"></div>
+        </div>
+
+        <!-- Price Details -->
+        <div style="border-top: 1px dashed rgba(255, 255, 255, 0.15); padding-top: 1rem;">
+          <div class="breakdown-row" style="font-size: 0.85rem;">
+            <span>Ticket Subtotal:</span>
+            <span id="ticketSubtotalVal"></span>
+          </div>
+          <div class="breakdown-row" style="font-size: 0.85rem;" id="ticketDiscountRow">
+            <span class="discount-text">Coupon Discount:</span>
+            <span class="discount-text" id="ticketDiscountVal"></span>
+          </div>
+          <div class="breakdown-row" style="font-size: 0.85rem;">
+            <span>Snacks Total:</span>
+            <span id="ticketSnacksVal"></span>
+          </div>
+          <div class="breakdown-row total-row" style="font-size: 1.15rem; margin-top: 0.5rem;">
+            <span>Total Paid:</span>
+            <span style="color: var(--accent-gold);" id="ticketFinalTotalVal"></span>
+          </div>
+          <div id="refundNotice" style="display: none; margin-top: 0.75rem; background: rgba(244, 63, 94, 0.2); border: 1px solid var(--accent-rose); padding: 0.75rem; border-radius: var(--radius-sm); text-align: center; color: #fb7185; font-size: 0.85rem;">
+            Booking Cancelled. 80% Refund Issued: <strong id="refundVal"></strong>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="btn-wrap" style="display: flex; justify-content: center; gap: 1rem; margin-top: 1.5rem;">
+      <button class="btn btn-secondary" onclick="window.print()">🖨 Print / Download Ticket</button>
+      <a href="/my-tickets.html" class="btn btn-primary">View My Tickets &rarr;</a>
+    </div>
+  </main>
+
+  <script src="/js/app.js"></script>
+  <script>
+    const urlParams = new URLSearchParams(window.location.search);
+    const bookingId = urlParams.get('bookingId');
+
+    if (!bookingId) {
+      alert("No booking specified.");
+      window.location.href = "/";
+    }
+
+    async function loadTicket() {
+      try {
+        const resp = await CineBook.fetchApi(`/api/bookings/${bookingId}`);
+        const data = resp.data;
+        const b = data.booking;
+
+        document.getElementById('ticketBookingId').textContent = b.bookingId;
+        document.getElementById('ticketMovieTitle').textContent = b.movieTitle;
+        document.getElementById('ticketShowMeta').textContent = `📅 ${CineBook.formatDateTime(b.showTime)}`;
+        document.getElementById('ticketScreenName').textContent = b.screenName;
+        document.getElementById('ticketCustomerName').textContent = b.customerName;
+        document.getElementById('ticketCustomerContact').textContent = `${b.customerPhone} • ${b.customerEmail}`;
+
+        document.getElementById('ticketQrImage').src = data.qrCodeDataUrl;
+
+        // Status badge
+        const badge = document.getElementById('ticketStatusBadge');
+        if (b.status === 'CANCELLED') {
+          badge.className = 'badge badge-danger';
+          badge.textContent = 'CANCELLED';
+          document.getElementById('refundNotice').style.display = 'block';
+          document.getElementById('refundVal').textContent = CineBook.formatCurrency(b.refundAmount);
+        } else {
+          badge.className = 'badge badge-success';
+          badge.textContent = 'CONFIRMED';
+          document.getElementById('refundNotice').style.display = 'none';
+        }
+
+        // Seats
+        if (b.seats && b.seats.length > 0) {
+          const seatLabels = b.seats.map(s => `${s.seatCode} (${s.seatTier})`);
+          document.getElementById('ticketSeatsList').textContent = seatLabels.join(', ');
+        } else {
+          document.getElementById('ticketSeatsList').textContent = '(Seats Released)';
+        }
+
+        // Snacks
+        if (b.snacks && b.snacks.length > 0) {
+          document.getElementById('ticketSnackSection').style.display = 'block';
+          document.getElementById('ticketSnackList').innerHTML = b.snacks.map(sn => `
+            <div>&bull; ${sn.snackName || sn.snackId} &times; ${sn.quantity} (${CineBook.formatCurrency(sn.subtotal)})</div>
+          `).join('');
+        }
+
+        // Breakdown
+        document.getElementById('ticketSubtotalVal').textContent = CineBook.formatCurrency(b.ticketSubtotal);
+        if (b.ticketDiscount && Number(b.ticketDiscount) > 0) {
+          document.getElementById('ticketDiscountRow').style.display = 'flex';
+          document.getElementById('ticketDiscountVal').textContent = `-${CineBook.formatCurrency(b.ticketDiscount)}`;
+        } else {
+          document.getElementById('ticketDiscountRow').style.display = 'none';
+        }
+        document.getElementById('ticketSnacksVal').textContent = CineBook.formatCurrency(b.snackSubtotal);
+        document.getElementById('ticketFinalTotalVal').textContent = CineBook.formatCurrency(b.finalTotal);
+      } catch (err) {
+        document.getElementById('ticketCard').innerHTML = `<p style="color: var(--accent-rose); padding: 2rem; text-align: center;">Error loading ticket: ${err.message}</p>`;
+      }
+    }
+
+    loadTicket();
+  </script>
+</body>
+</html>
+

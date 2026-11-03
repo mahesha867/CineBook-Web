@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CineBook Web — Premium Cinema Experience</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <!-- Navigation Header -->
+  <header class="navbar">
+    <a href="/" class="nav-brand">
+      <span class="brand-icon">🎬</span> CineBook Web
+    </a>
+    <nav>
+      <ul class="nav-links">
+        <li><a href="/" class="nav-link active">Movies</a></li>
+        <li><a href="/my-tickets.html" class="nav-link">My Tickets</a></li>
+        <li><a href="/admin.html" class="nav-link admin-btn">Admin Portal</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <!-- Hero Banner -->
+  <section class="hero">
+    <h1 class="hero-title">Experience Cinema in Pure Fidelity</h1>
+    <p class="hero-subtitle">Book Dolby Atmos & IMAX Laser screenings with real-time seat locks, dynamic pricing, and instant digital tickets.</p>
+  </section>
+
+  <!-- Main Content Container -->
+  <main class="container">
+    <!-- Filter and Search Bar -->
+    <div class="filter-bar">
+      <div class="genre-pills" id="genreContainer">
+        <button class="genre-pill active" data-genre="ALL">All Genres</button>
+        <button class="genre-pill" data-genre="Sci-Fi">Sci-Fi</button>
+        <button class="genre-pill" data-genre="Action">Action</button>
+        <button class="genre-pill" data-genre="Drama">Drama</button>
+      </div>
+      <input type="text" id="searchInput" class="search-input" placeholder="Search movies by title...">
+    </div>
+
+    <!-- Movie Cards Grid -->
+    <div class="movie-grid" id="movieGrid">
+      <div style="grid-column: 1/-1; text-align: center; padding: 3rem; color: var(--text-muted);">
+        Loading now showing movies...
+      </div>
+    </div>
+  </main>
+
+  <!-- Showtimes Modal -->
+  <div class="modal-overlay" id="showModal">
+    <div class="modal-content">
+      <button class="modal-close" id="modalCloseBtn">&times;</button>
+      <h2 id="modalMovieTitle" style="margin-bottom: 0.5rem; font-size: 1.5rem;">Select Showtime</h2>
+      <p id="modalMovieMeta" style="color: var(--text-secondary); margin-bottom: 1.5rem; font-size: 0.9rem;"></p>
+      
+      <div style="margin-bottom: 1rem;">
+        <h4 style="font-size: 0.95rem; color: var(--text-muted); margin-bottom: 0.75rem; text-transform: uppercase; letter-spacing: 1px;">Available Screenings</h4>
+        <div id="showtimesList" style="display: flex; flex-direction: column; gap: 0.75rem;">
+          <!-- Dynamically populated -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer style="text-align: center; padding: 2rem; border-top: 1px solid var(--border-color); color: var(--text-muted); font-size: 0.85rem;">
+    CineBook Web &copy; 2026 &bull; CSE Academic OOP & DBMS Showcase Project
+  </footer>
+
+  <script src="/js/app.js"></script>
+  <script>
+    let allMovies = [];
+
+    async function loadMovies() {
+      try {
+        const resp = await CineBook.fetchApi('/api/movies');
+        allMovies = resp.data || [];
+        renderMovies(allMovies);
+      } catch (err) {
+        document.getElementById('movieGrid').innerHTML = `<p style="color: var(--accent-rose); text-align: center;">Failed to load movies: ${err.message}</p>`;
+      }
+    }
+
+    function renderMovies(movies) {
+      const grid = document.getElementById('movieGrid');
+      if (movies.length === 0) {
+        grid.innerHTML = '<p style="grid-column: 1/-1; text-align: center; color: var(--text-muted); padding: 3rem;">No movies matched your search filter.</p>';
+        return;
+      }
+
+      grid.innerHTML = movies.map(m => `
+        <article class="movie-card">
+          <div class="movie-poster-wrap">
+            <img src="${m.posterUrl || 'https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=600'}" alt="${m.title}" class="movie-poster" onerror="this.src='https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=600'">
+            <span class="movie-rating-badge">${m.rating}</span>
+          </div>
+          <div class="movie-info">
+            <h3 class="movie-title">${m.title}</h3>
+            <div class="movie-meta">
+              <span>🎭 ${m.genre}</span>
+              <span>⏱ ${m.durationMins}m</span>
+            </div>
+            <p class="movie-desc">${m.description || ''}</p>
+            <button class="btn btn-primary" onclick="openShowModal(${m.movieId}, '${m.title.replace(/'/g, "\\'")}', '${m.genre}', '${m.rating}')">
+              Select Showtimes &rarr;
+            </button>
+          </div>
+        </article>
+      `).join('');
+    }
+
+    // Filter by genre
+    document.getElementById('genreContainer').addEventListener('click', (e) => {
+      if (e.target.classList.contains('genre-pill')) {
+        document.querySelectorAll('.genre-pill').forEach(p => p.classList.remove('active'));
+        e.target.classList.add('active');
+        const genre = e.target.dataset.genre;
+        const filtered = (genre === 'ALL') 
+          ? allMovies 
+          : allMovies.filter(m => m.genre.toLowerCase().includes(genre.toLowerCase()));
+        renderMovies(filtered);
+      }
+    });
+
+    // Search filter
+    document.getElementById('searchInput').addEventListener('input', (e) => {
+      const q = e.target.value.toLowerCase().trim();
+      const filtered = allMovies.filter(m => m.title.toLowerCase().includes(q) || m.genre.toLowerCase().includes(q));
+      renderMovies(filtered);
+    });
+
+    // Show selection modal
+    async function openShowModal(movieId, title, genre, rating) {
+      document.getElementById('modalMovieTitle').textContent = title;
+      document.getElementById('modalMovieMeta').textContent = `${genre} • Rated ${rating}`;
+      const list = document.getElementById('showtimesList');
+      list.innerHTML = '<p style="color: var(--text-muted); font-size: 0.9rem;">Fetching upcoming shows...</p>';
+      
+      document.getElementById('showModal').classList.add('active');
+
+      try {
+        const resp = await CineBook.fetchApi(`/api/movies/${movieId}/shows`);
+        const shows = resp.data || [];
+        if (shows.length === 0) {
+          list.innerHTML = '<p style="color: var(--text-muted); font-size: 0.9rem;">No screenings currently scheduled for this title.</p>';
+          return;
+        }
+
+        list.innerHTML = shows.map(s => {
+          const isPrime = s.basePriceMultiplier > 1.0;
+          const isLate = s.basePriceMultiplier < 1.0;
+          const tag = isPrime ? '<span class="badge badge-warning" style="margin-left: 0.5rem;">Prime</span>' 
+                    : isLate ? '<span class="badge badge-info" style="margin-left: 0.5rem;">Late Night -10%</span>' 
+                    : '';
+
+          return `
+            <div style="background: var(--bg-card); padding: 1rem; border-radius: var(--radius-sm); border: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
+              <div>
+                <div style="font-weight: 700; color: #fff;">${CineBook.formatDateTime(s.showTime)} ${tag}</div>
+                <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.2rem;">🖥 ${s.screenName}</div>
+              </div>
+              <button class="btn btn-primary" style="padding: 0.5rem 1rem; font-size: 0.85rem;" onclick="proceedToSeatSelection(${s.showId}, ${movieId}, '${title.replace(/'/g, "\\'")}', '${s.showTime}', '${s.screenName.replace(/'/g, "\\'")}')">
+                Choose Seats
+              </button>
+            </div>
+          `;
+        }).join('');
+      } catch (err) {
+        list.innerHTML = `<p style="color: var(--accent-rose);">Failed to load shows: ${err.message}</p>`;
+      }
+    }
+
+    function proceedToSeatSelection(showId, movieId, movieTitle, showTime, screenName) {
+      const state = CineBook.getBookingState();
+      state.showId = showId;
+      state.movieId = movieId;
+      state.movieTitle = movieTitle;
+      state.showTime = showTime;
+      state.screenName = screenName;
+      state.seatIds = [];
+      state.seatLabels = [];
+      CineBook.saveBookingState(state);
+      window.location.href = `/seat-selection.html?showId=${showId}`;
+    }
+
+    document.getElementById('modalCloseBtn').addEventListener('click', () => {
+      document.getElementById('showModal').classList.remove('active');
+    });
+
+    loadMovies();
+  </script>
+</body>
+</html>
+

@@ -1,0 +1,23 @@
+# Maven build output
+target/
+*.jar
+*.war
+*.nar
+*.ear
+*.class
+
+# IDE & Editor files
+.idea/
+*.iml
+.vscode/
+.classpath
+.project
+.settings/
+
+# OS generated files
+.DS_Store
+Thumbs.db
+*.log
+
+# Sensitive environment files
+.env

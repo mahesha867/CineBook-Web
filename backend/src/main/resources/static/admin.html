@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CineBook Web — Executive Analytics &amp; DBMS Audit</title>
+  <link rel="stylesheet" href="/css/styles.css">
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+</head>
+<body>
+  <header class="navbar">
+    <a href="/" class="nav-brand"><span class="brand-icon">🎬</span> CineBook Web</a>
+    <nav>
+      <ul class="nav-links">
+        <li><a href="/" class="nav-link">Movies</a></li>
+        <li><a href="/my-tickets.html" class="nav-link">My Tickets</a></li>
+        <li><a href="/admin.html" class="nav-link active admin-btn">Admin Portal</a></li>
+        <li id="logoutLi" style="display: none;"><button id="logoutBtn" class="btn btn-secondary" style="padding: 0.35rem 0.75rem; font-size: 0.8rem;">Logout</button></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main class="container">
+    <!-- Login Gate (shown if not authenticated) -->
+    <div id="loginGate" style="max-width: 420px; margin: 4rem auto; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 2rem; box-shadow: var(--shadow-card);">
+      <h2 style="color: #fff; font-size: 1.5rem; margin-bottom: 0.5rem; text-align: center;">🔐 Admin Sign-In</h2>
+      <p style="color: var(--text-secondary); font-size: 0.85rem; text-align: center; margin-bottom: 1.5rem;">Access SQL view analytics and trigger audit logs</p>
+
+      <form id="adminLoginForm" onsubmit="return false;" style="display: flex; flex-direction: column; gap: 1rem;">
+        <div>
+          <label style="display: block; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.35rem;">Username</label>
+          <input type="text" id="adminUser" value="admin" class="search-input" style="width: 100%;">
+        </div>
+        <div>
+          <label style="display: block; font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.35rem;">Password</label>
+          <input type="password" id="adminPass" value="admin123" class="search-input" style="width: 100%;">
+        </div>
+        <button class="btn btn-primary" id="adminLoginBtn" style="margin-top: 0.5rem; padding: 0.8rem;">
+          Authenticate &rarr;
+        </button>
+      </form>
+    </div>
+
+    <!-- Authenticated Dashboard View (hidden until login) -->
+    <div id="dashboardView" style="display: none;">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 2rem;">
+        <div>
+          <h1 style="font-size: 2rem; color: #fff; margin-bottom: 0.25rem;">Cinema Intelligence &amp; DBMS Audit</h1>
+          <p style="color: var(--text-secondary); font-size: 0.95rem;">Powered by MySQL 8 Views, Window Functions (DENSE_RANK), and Audit Triggers</p>
+        </div>
+        <button class="btn btn-secondary" onclick="loadAllAnalytics()">🔄 Refresh Analytics</button>
+      </div>
+
+      <!-- High-Level KPI Summary Cards -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">Net Realized Revenue</div>
+          <div class="stat-value" id="kpiNetRev" style="color: var(--accent-emerald);">Rs. 0.00</div>
+          <div style="font-size: 0.75rem; color: var(--text-muted);">After accounting for 80% refunds</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Average Occupancy Rate</div>
+          <div class="stat-value" id="kpiAvgOcc" style="color: var(--accent-cyan);">0%</div>
+          <div style="font-size: 0.75rem; color: var(--text-muted);">Across all screen showtimes</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Confirmed Bookings</div>
+          <div class="stat-value" id="kpiConfirmed" style="color: var(--accent-gold);">0</div>
+          <div style="font-size: 0.75rem; color: var(--text-muted);" id="kpiTotalBookings">Total reservations created</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Cancellation Rate</div>
+          <div class="stat-value" id="kpiCancelRate" style="color: var(--accent-rose);">0%</div>
+          <div style="font-size: 0.75rem; color: var(--text-muted);" id="kpiRefundsIssued">Refunds Issued: Rs. 0.00</div>
+        </div>
+      </div>
+
+      <!-- Analytical Charts Grid -->
+      <div class="charts-grid">
+        <!-- Chart 1: Revenue by Movie (View: v_movie_revenue_analytics) -->
+        <div class="chart-card">
+          <div class="chart-title">🎬 Movie Revenue Breakdown (Tickets vs. Snacks)</div>
+          <canvas id="movieRevChart" height="260"></canvas>
+        </div>
+
+        <!-- Chart 2: Seat Occupancy per Show (View: v_show_occupancy) -->
+        <div class="chart-card">
+          <div class="chart-title">🎟 Show Occupancy Rates (%)</div>
+          <canvas id="occupancyChart" height="260"></canvas>
+        </div>
+
+        <!-- Chart 3: Top Concessions (View: v_top_selling_snacks using DENSE_RANK) -->
+        <div class="chart-card">
+          <div class="chart-title">🍿 Concessions Sales Rank (Window Function)</div>
+          <canvas id="topSnacksChart" height="260"></canvas>
+        </div>
+
+        <!-- Chart 4: Peak Booking Hours Distribution -->
+        <div class="chart-card">
+          <div class="chart-title">⏰ Peak Booking Hours Distribution</div>
+          <canvas id="peakHoursChart" height="260"></canvas>
+        </div>
+      </div>
+
+      <!-- Audit Trail Table (Trigger Showcase) -->
+      <div class="breakdown-card" style="margin-top: 2rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+          <div>
+            <h3 style="color: #fff; font-size: 1.2rem;">🛡 Database Trigger Audit Trail</h3>
+            <p style="color: var(--text-secondary); font-size: 0.85rem;">Automatically populated by MySQL AFTER INSERT / AFTER UPDATE triggers on `bookings` table.</p>
+          </div>
+          <span class="badge badge-info" id="auditCountBadge">0 Logs</span>
+        </div>
+
+        <div style="overflow-x: auto;">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Log ID</th>
+                <th>Action Type</th>
+                <th>Table</th>
+                <th>Record ID</th>
+                <th>Timestamp</th>
+                <th>Snapshot JSON Details</th>
+              </tr>
+            </thead>
+            <tbody id="auditTableBody">
+              <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Loading audit trail...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="/js/app.js"></script>
+  <script>
+    let movieRevChart = null;
+    let occupancyChart = null;
+    let topSnacksChart = null;
+    let peakHoursChart = null;
+
+    function checkAuth() {
+      const token = sessionStorage.getItem('cinebook_admin_token');
+      if (token) {
+        document.getElementById('loginGate').style.display = 'none';
+        document.getElementById('dashboardView').style.display = 'block';
+        document.getElementById('logoutLi').style.display = 'block';
+        loadAllAnalytics();
+      } else {
+        document.getElementById('loginGate').style.display = 'block';
+        document.getElementById('dashboardView').style.display = 'none';
+        document.getElementById('logoutLi').style.display = 'none';
+      }
+    }
+
+    document.getElementById('adminLoginBtn').addEventListener('click', async () => {
+      const u = document.getElementById('adminUser').value.trim();
+      const p = document.getElementById('adminPass').value;
+
+      try {
+        const resp = await CineBook.fetchApi('/api/admin/login', {
+          method: 'POST',
+          body: JSON.stringify({ username: u, password: p })
+        });
+        sessionStorage.setItem('cinebook_admin_token', resp.data.token);
+        CineBook.showToast("Signed in as Administrator", "success");
+        checkAuth();
+      } catch (err) {
+        CineBook.showToast(err.message, "error");
+      }
+    });
+
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+      sessionStorage.removeItem('cinebook_admin_token');
+      checkAuth();
+    });
+
+    async function loadAllAnalytics() {
+      try {
+        await Promise.all([
+          loadKpiSummary(),
+          loadMovieRevenueChart(),
+          loadOccupancyChart(),
+          loadTopSnacksChart(),
+          loadPeakHoursChart(),
+          loadAuditLogs()
+        ]);
+      } catch (err) {
+        console.error("Analytics fetch error:", err);
+      }
+    }
+
+    async function loadKpiSummary() {
+      const resp = await CineBook.fetchApi('/api/admin/analytics/summary');
+      const d = resp.data;
+
+      document.getElementById('kpiNetRev').textContent = CineBook.formatCurrency(d.net_revenue || 0);
+      document.getElementById('kpiAvgOcc').textContent = `${Number(d.average_occupancy_percent || 0).toFixed(1)}%`;
+      document.getElementById('kpiConfirmed').textContent = d.confirmed_bookings || 0;
+      document.getElementById('kpiTotalBookings').textContent = `Out of ${d.total_bookings || 0} total bookings created`;
+
+      const total = Number(d.total_bookings) || 0;
+      const cancelled = Number(d.cancelled_bookings) || 0;
+      const rate = total > 0 ? ((cancelled / total) * 100).toFixed(1) : '0.0';
+      document.getElementById('kpiCancelRate').textContent = `${rate}%`;
+      document.getElementById('kpiRefundsIssued').textContent = `Refunds Issued: ${CineBook.formatCurrency(d.total_refunds_issued || 0)}`;
+    }
+
+    async function loadMovieRevenueChart() {
+      const resp = await CineBook.fetchApi('/api/admin/analytics/movie-revenue');
+      const data = resp.data || [];
+
+      const labels = data.map(d => d.movie_title);
+      const ticketRevs = data.map(d => Number(d.gross_ticket_revenue));
+      const snackRevs = data.map(d => Number(d.gross_snack_revenue));
+
+      const ctx = document.getElementById('movieRevChart').getContext('2d');
+      if (movieRevChart) movieRevChart.destroy();
+
+      movieRevChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [
+            { label: 'Ticket Revenue (Rs.)', data: ticketRevs, backgroundColor: '#06b6d4' },
+            { label: 'Snack Revenue (Rs.)', data: snackRevs, backgroundColor: '#f59e0b' }
+          ]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            x: { stacked: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } },
+            y: { stacked: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } }
+          },
+          plugins: {
+            legend: { labels: { color: '#f8fafc' } }
+          }
+        }
+      });
+    }
+
+    async function loadOccupancyChart() {
+      const resp = await CineBook.fetchApi('/api/admin/analytics/occupancy');
+      const data = resp.data || [];
+
+      const labels = data.map(d => `${d.movie_title.substring(0, 15)}... (${new Date(d.show_time).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})})`);
+      const occs = data.map(d => Number(d.occupancy_percent));
+
+      const ctx = document.getElementById('occupancyChart').getContext('2d');
+      if (occupancyChart) occupancyChart.destroy();
+
+      occupancyChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Occupancy %',
+            data: occs,
+            backgroundColor: occs.map(val => val > 80 ? '#f43f5e' : val > 40 ? '#06b6d4' : '#10b981')
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } },
+            y: { max: 100, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } }
+          },
+          plugins: { legend: { display: false } }
+        }
+      });
+    }
+
+    async function loadTopSnacksChart() {
+      const resp = await CineBook.fetchApi('/api/admin/analytics/top-snacks');
+      const data = resp.data || [];
+
+      const labels = data.map(d => `#${d.revenue_rank} ${d.snack_name}`);
+      const revs = data.map(d => Number(d.total_revenue_generated));
+
+      const ctx = document.getElementById('topSnacksChart').getContext('2d');
+      if (topSnacksChart) topSnacksChart.destroy();
+
+      topSnacksChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label: 'Concession Revenue (Rs.)',
+            data: revs,
+            backgroundColor: '#a855f7'
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          scales: {
+            x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } },
+            y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } }
+          },
+          plugins: { legend: { display: false } }
+        }
+      });
+    }
+
+    async function loadPeakHoursChart() {
+      const resp = await CineBook.fetchApi('/api/admin/analytics/peak-hours');
+      const data = resp.data || [];
+
+      const labels = data.map(d => `${d.booking_hour}:00`);
+      const counts = data.map(d => Number(d.total_bookings));
+
+      const ctx = document.getElementById('peakHoursChart').getContext('2d');
+      if (peakHoursChart) peakHoursChart.destroy();
+
+      peakHoursChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: labels.length ? labels : ['10:00', '14:00', '18:00', '21:00'],
+          datasets: [{
+            label: 'Bookings Created',
+            data: counts.length ? counts : [0, 0, 0, 0],
+            borderColor: '#f59e0b',
+            backgroundColor: 'rgba(245, 158, 11, 0.15)',
+            fill: true,
+            tension: 0.35
+          }]
+        },
+        options: {
+          responsive: true,
+          scales: {
+            x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } },
+            y: { beginAtZero: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8', stepSize: 1 } }
+          },
+          plugins: { legend: { labels: { color: '#f8fafc' } } }
+        }
+      });
+    }
+
+    async function loadAuditLogs() {
+      const resp = await CineBook.fetchApi('/api/admin/audit-logs?limit=50');
+      const logs = resp.data || [];
+      document.getElementById('auditCountBadge').textContent = `${logs.length} Log Entries`;
+
+      const tbody = document.getElementById('auditTableBody');
+      if (logs.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align: center; color: var(--text-muted); padding: 2rem;">No audit logs recorded yet. Create a booking to trigger logs!</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = logs.map(l => {
+        const badgeClass = l.actionType === 'BOOKING_CREATED' ? 'badge-success' 
+                         : l.actionType === 'BOOKING_CANCELLED' ? 'badge-danger' 
+                         : 'badge-info';
+
+        return `
+          <tr>
+            <td>#${l.logId}</td>
+            <td><span class="badge ${badgeClass}">${l.actionType}</span></td>
+            <td><code>${l.tableName}</code></td>
+            <td><strong>${l.recordId}</strong></td>
+            <td>${CineBook.formatDateTime(l.createdAt)}</td>
+            <td><pre style="background: rgba(0,0,0,0.3); padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; max-width: 400px; overflow-x: auto; color: #cbd5e1;">${l.detailsJson}</pre></td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    checkAuth();
+  </script>
+</body>
+</html>
+

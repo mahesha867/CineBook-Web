@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CineBook Web — My Tickets &amp; Booking Management</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <header class="navbar">
+    <a href="/" class="nav-brand"><span class="brand-icon">🎬</span> CineBook Web</a>
+    <nav>
+      <ul class="nav-links">
+        <li><a href="/" class="nav-link">Movies</a></li>
+        <li><a href="/my-tickets.html" class="nav-link active">My Tickets</a></li>
+        <li><a href="/admin.html" class="nav-link admin-btn">Admin Portal</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <main class="container">
+    <div style="margin-bottom: 2rem;">
+      <h1 style="font-size: 2rem; color: #fff; margin-bottom: 0.5rem;">My Reservations &amp; Tickets</h1>
+      <p style="color: var(--text-secondary); font-size: 0.95rem;">Retrieve past bookings, view digital QR tickets, or cancel reservations with automatic 80% refunds.</p>
+    </div>
+
+    <!-- Search/Lookup Box -->
+    <div class="filter-bar" style="margin-bottom: 2rem;">
+      <div style="display: flex; gap: 0.75rem; width: 100%; max-width: 600px;">
+        <input type="text" id="lookupInput" class="search-input" style="flex: 1;" placeholder="Enter Booking ID (e.g. CB1001), Phone, or Email...">
+        <button class="btn btn-primary" id="lookupBtn">Find Tickets</button>
+      </div>
+    </div>
+
+    <!-- Results List -->
+    <div id="ticketsList" style="display: flex; flex-direction: column; gap: 1.5rem;">
+      <div style="text-align: center; color: var(--text-muted); padding: 3rem; background: var(--bg-card); border-radius: var(--radius-md); border: 1px solid var(--border-color);">
+        Enter your Booking ID (e.g. CB1001), Phone, or Email to view your reservations.
+      </div>
+    </div>
+  </main>
+
+  <!-- Cancellation Confirmation Modal -->
+  <div class="modal-overlay" id="cancelModal">
+    <div class="modal-content">
+      <button class="modal-close" id="cancelModalClose">&times;</button>
+      <h3 style="color: var(--accent-rose); font-size: 1.3rem; margin-bottom: 0.5rem;">Confirm Booking Cancellation</h3>
+      <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1.25rem;">
+        According to CineBook policy:
+      </p>
+
+      <div style="background: rgba(244, 63, 94, 0.1); border: 1px solid rgba(244, 63, 94, 0.3); border-radius: var(--radius-sm); padding: 1rem; margin-bottom: 1.25rem; font-size: 0.85rem; color: #fca5a5;">
+        <div>&bull; <strong>80% of total paid amount</strong> will be refunded to your source payment method.</div>
+        <div style="margin-top: 0.4rem;">&bull; Reserved seats will be immediately freed and offered to waitlisted customers.</div>
+        <div style="margin-top: 0.4rem;">&bull; Historical concession orders remain in audit records. Duplicate cancellations are strictly rejected.</div>
+      </div>
+
+      <div style="margin-bottom: 1.5rem;">
+        <div style="font-size: 0.85rem; color: var(--text-secondary);">Booking ID: <strong id="cancelBookingIdSpan" style="color: #fff;"></strong></div>
+        <div style="font-size: 1.1rem; font-weight: 700; color: #fff; margin-top: 0.25rem;">
+          Calculated Refund (80%): <span id="cancelRefundSpan" style="color: var(--accent-emerald);"></span>
+        </div>
+      </div>
+
+      <div style="display: flex; gap: 1rem; justify-content: flex-end;">
+        <button class="btn btn-secondary" id="cancelDismissBtn">Keep Reservation</button>
+        <button class="btn btn-danger" id="cancelConfirmBtn">Confirm 80% Refund</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/js/app.js"></script>
+  <script>
+    let activeBookingToCancel = null;
+
+    document.getElementById('lookupBtn').addEventListener('click', performLookup);
+    document.getElementById('lookupInput').addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') performLookup();
+    });
+
+    async function performLookup() {
+      const query = document.getElementById('lookupInput').value.trim();
+      if (!query) {
+        CineBook.showToast("Please enter a Booking ID, Phone, or Email.", "info");
+        return;
+      }
+
+      const container = document.getElementById('ticketsList');
+      container.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 2rem;">Searching bookings...</div>';
+
+      try {
+        let bookings = [];
+
+        // Check if user entered a specific booking ID format e.g. CB1001
+        if (/^CB\d+$/i.test(query)) {
+          try {
+            const resp = await CineBook.fetchApi(`/api/bookings/${query.toUpperCase()}`);
+            if (resp.data && resp.data.booking) {
+              bookings = [resp.data.booking];
+            }
+          } catch (e) { /* Fall through to lookup */ }
+        }
+
+        if (bookings.length === 0) {
+          const resp = await CineBook.fetchApi(`/api/bookings/lookup?query=${encodeURIComponent(query)}`);
+          bookings = resp.data || [];
+        }
+
+        if (bookings.length === 0) {
+          container.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 3rem; background: var(--bg-card); border-radius: var(--radius-md); border: 1px solid var(--border-color);">No bookings found matching your search.</div>';
+          return;
+        }
+
+        renderBookingsList(bookings);
+      } catch (err) {
+        container.innerHTML = `<div style="color: var(--accent-rose); text-align: center; padding: 2rem;">Error: ${err.message}</div>`;
+      }
+    }
+
+    function renderBookingsList(bookings) {
+      const container = document.getElementById('ticketsList');
+      container.innerHTML = bookings.map(b => {
+        const isCancelled = b.status === 'CANCELLED';
+        const badge = isCancelled 
+          ? '<span class="badge badge-danger">CANCELLED</span>' 
+          : '<span class="badge badge-success">CONFIRMED</span>';
+
+        const seatList = (b.seats && b.seats.length > 0)
+          ? b.seats.map(s => s.seatCode).join(', ')
+          : '(Seats Released)';
+
+        return `
+          <div class="breakdown-card" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1.5rem;">
+            <div>
+              <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 0.35rem;">
+                <h3 style="font-size: 1.3rem; color: #fff;">${b.bookingId}</h3>
+                ${badge}
+              </div>
+              <div style="font-size: 1.1rem; font-weight: 700; color: var(--accent-cyan); margin-bottom: 0.25rem;">${b.movieTitle || 'Screening'}</div>
+              <div style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem;">
+                📅 ${CineBook.formatDateTime(b.showTime)} &bull; 🖥 ${b.screenName}
+              </div>
+              <div style="font-size: 0.85rem; color: var(--text-muted);">
+                Seats: <strong style="color: #fff;">${seatList}</strong> &bull; 
+                Total Paid: <strong style="color: var(--accent-gold);">${CineBook.formatCurrency(b.finalTotal)}</strong>
+                ${isCancelled ? ` &bull; Refund: <strong style="color: #fb7185;">${CineBook.formatCurrency(b.refundAmount)}</strong>` : ''}
+              </div>
+            </div>
+
+            <div style="display: flex; gap: 0.75rem;">
+              <a href="/ticket.html?bookingId=${b.bookingId}" class="btn btn-secondary">
+                View Digital Ticket 🎟
+              </a>
+              ${!isCancelled ? `
+                <button class="btn btn-danger" onclick="promptCancelBooking('${b.bookingId}', ${b.finalTotal})">
+                  Cancel Booking
+                </button>
+              ` : ''}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function promptCancelBooking(bookingId, finalTotal) {
+      activeBookingToCancel = bookingId;
+      const refund = (Number(finalTotal) * 0.80).toFixed(2);
+      document.getElementById('cancelBookingIdSpan').textContent = bookingId;
+      document.getElementById('cancelRefundSpan').textContent = 'Rs. ' + refund;
+      document.getElementById('cancelModal').classList.add('active');
+    }
+
+    document.getElementById('cancelModalClose').addEventListener('click', () => {
+      document.getElementById('cancelModal').classList.remove('active');
+    });
+    document.getElementById('cancelDismissBtn').addEventListener('click', () => {
+      document.getElementById('cancelModal').classList.remove('active');
+    });
+
+    document.getElementById('cancelConfirmBtn').addEventListener('click', async () => {
+      if (!activeBookingToCancel) return;
+      try {
+        const resp = await CineBook.fetchApi(`/api/bookings/${activeBookingToCancel}/cancel`, {
+          method: 'POST'
+        });
+        document.getElementById('cancelModal').classList.remove('active');
+        CineBook.showToast(`Booking ${activeBookingToCancel} cancelled. Refund: Rs. ${resp.data.refundAmount}`, "success");
+        performLookup();
+      } catch (err) {
+        CineBook.showToast(err.message, "error");
+      }
+    });
+
+    // Check if URL has prefilled phone/email or bookingId
+    const qParam = new URLSearchParams(window.location.search).get('q');
+    if (qParam) {
+      document.getElementById('lookupInput').value = qParam;
+      performLookup();
+    }
+  </script>
+</body>
+</html>
+
