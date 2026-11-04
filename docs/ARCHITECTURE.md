@@ -13,6 +13,8 @@ Unlike typical monolithic student CRUD apps, CineBook Web implements:
 - **Clean Layered Separation of Concerns**: Strict boundary separation across Presentation, REST Controllers, Service/Domain Logic, Data Access (DAO), and Relational Database engine.
 - **Explicit Zero-ORM Architecture**: Eliminates Hibernate/JPA black-box magic in favor of pure **Spring `JdbcTemplate`** and the **DAO Pattern**, enabling explicit row-level locking (`SELECT ... FOR UPDATE`), deterministic deadlock prevention, and manual transaction boundaries (`REPEATABLE READ`).
 - **Production Dual-Engine Coordination**: Application-level background schedulers work concurrently with database-level MySQL 8 events, stored procedures, audit triggers, and window functions.
+- **Curated Multi-Genre Catalog & Theatrical Posters**: Real-world cinema catalog featuring 6 major titles (*Hi Nanna*, *Dear Comrade*, *Avengers: Endgame*, *Spider-Man: Brand New Day*, *Jananayagan*, *Sita Ramam*) with dynamic show schedules and automated startup synchronization (`MovieDataInitializer`).
+- **Interactive Admin Operations Suite**: Master-detail screening inspector, 2D interactive auditorium seat map, and real-time customer reservation roster.
 - **Cloud-Native Deployment**: Containerized multi-stage Docker build running live on **Render** backed by an **Aiven Cloud MySQL 8.0** cluster.
 
 ---
@@ -154,6 +156,7 @@ All endpoints return uniform JSON envelopes (`ApiResponse<T>`):
 |---|---|---|
 | **Movies** | `GET /api/movies` | Fetches active movie catalog with posters and runtimes |
 | **Showtimes** | `GET /api/movies/{id}/shows` | Screenings partitioned by screen with dynamic base multipliers |
+| **All Shows** | `GET /api/shows` | Returns all upcoming scheduled screenings |
 | **Seat Map** | `GET /api/shows/{id}/seats` | Real-time seat grid (`AVAILABLE`, `HELD`, `HELD_BY_YOU`, `BOOKED`) |
 | **Seat Hold** | `POST /api/shows/{id}/hold-seats` | Acquires 5-minute exclusive hold lock on seat array |
 | **Recommendation** | `POST /api/shows/{id}/recommend-seats`| Executes Strategy Pattern to find contiguous optimal seats |

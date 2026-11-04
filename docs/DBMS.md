@@ -239,6 +239,34 @@ BEGIN
 END;
 ```
 
+### 4. Complex Multi-Table Relational Joins (Admin Inspection Engine)
+The Admin Portal's **Booked Seats Customer Roster** executes an optimized 4-table relational join providing full traceability from physical seats to confirmed reservations and customer profiles:
+
+```sql
+SELECT 
+    bs.booking_seat_id,
+    bs.booking_id,
+    bs.show_id,
+    bs.seat_id,
+    s.row_char,
+    s.seat_num,
+    CONCAT(s.row_char, s.seat_num) AS seat_code,
+    bs.seat_tier,
+    bs.unit_price,
+    b.booking_time,
+    b.status AS booking_status,
+    u.user_id,
+    u.full_name AS customer_name,
+    u.email AS customer_email,
+    u.phone AS customer_phone
+FROM booking_seats bs
+JOIN bookings b ON bs.booking_id = b.booking_id
+JOIN seats s ON bs.seat_id = s.seat_id
+JOIN users u ON b.user_id = u.user_id
+WHERE bs.show_id = ? AND b.status = 'CONFIRMED'
+ORDER BY s.row_char ASC, s.seat_num ASC;
+```
+
 ---
 
 ## 6. Indexing Strategy & Performance Analysis

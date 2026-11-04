@@ -190,11 +190,12 @@ Concrete subclasses (`WeekendPricingRule`, `LateNightPricingRule`, `HighOccupanc
 | Pattern | Implementation in CineBook Web | Benefit / Purpose |
 |---|---|---|
 | **Strategy Pattern** | `SeatRecommendationStrategy` (`CenterContiguousStrategy`, `TierOptimizedStrategy`) | Enables hot-swapping seat selection algorithms based on customer criteria. |
-| **DAO Pattern** | `MovieDao`, `ShowDao`, `SeatDao`, `BookingDao` using Spring `JdbcTemplate` | Completely decouples raw SQL and transactional locks from business services. |
+| **DAO Pattern** | `MovieDao`, `ShowDao`, `SeatDao`, `BookingDao`, `AnalyticsDao` using Spring `JdbcTemplate` | Completely decouples raw SQL, analytical views, and transactional locks from business services. |
 | **Chain of Responsibility** | `PricingEngine` chaining sequential surcharge / discount rules | Allows adding new dynamic pricing rules without modifying existing logic (Open/Closed Principle). |
 | **Factory Pattern** | `BookingDao.getNextBookingSequence()` | Thread-safe generation of formatted business keys (`CB1001`, `CB1002`). |
 | **Singleton Pattern** | Managed by Spring IoC container (`@Service`, `@Repository`, `@RestController`) | Ensures thread-safe, stateless shared service singletons across requests. |
 | **Value Object Pattern**| `PriceBreakdown`, `SeatCoordinate` | Guarantees audit integrity and thread-safety through immutability. |
+| **Lifecycle Runner Pattern**| `MovieDataInitializer` (`CommandLineRunner`) | Idempotent automatic synchronization of the 6-film catalog and dynamic screening schedules on application boot. |
 
 ---
 

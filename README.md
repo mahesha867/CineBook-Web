@@ -84,16 +84,24 @@ Unlike basic CRUD applications, CineBook Web implements plain JDBC with Spring's
 5. **🎟 Digital Ticket with ZXing QR Code**:
    - Generates a Base64 PNG QR code embedded directly into a modern boarding-pass card.
    - Lookup past tickets in "My Tickets" by Booking ID, Phone, or Email.
-6. **📊 Admin Analytics Dashboard (`/admin.html`)**:
+6. **📊 Interactive Admin Operations & Analytics Portal (`/admin.html`)**:
    - Secure sign-in (`admin` / `admin123`).
-   - KPI metric cards: Net Realized Revenue, Occupancy Rate, Total Bookings, Cancellation Rate.
-   - Chart.js visual charts:
+   - **🎬 Available Shows & Booked Seats Inspector**:
+     - Master-Detail screening inspector partitioned by movie and screen.
+     - Interactive 2D auditorium seat grid (🔴 Booked, 🟡 Held, 🔵 Available) with instant seat-level customer modal inspection.
+     - Searchable **Confirmed Reservations Roster** detailing Seat Code, Tier, Booking ID, Customer Name, Phone, Email, Amount Paid, and Timestamp.
+   - **📈 Executive KPI Analytics & Chart.js**:
+     - KPI metric cards: Net Realized Revenue, Occupancy Rate, Total Bookings, Cancellation Rate.
      - Multi-axis Bar Chart: Revenue by Movie (Tickets vs Snacks).
      - Occupancy per Show (Bar chart).
      - Top Concessions: Ranked using MySQL Window Function `DENSE_RANK()`.
      - Peak Booking Hours (Line chart).
 7. **🛡 Database Trigger Audit Trail**:
    - Triggers `trg_after_booking_insert` and `trg_after_booking_cancel` write real-time JSON snapshots into the `audit_log` table.
+8. **🎥 Curated Theatrical Catalog & Automatic Database Sync**:
+   - Features 6 major films: *Hi Nanna*, *Dear Comrade*, *Avengers: Endgame*, *Spider-Man: Brand New Day*, *Jananayagan*, and *Sita Ramam*.
+   - High-resolution theatrical posters with `referrerpolicy="no-referrer"` and genre filtering (Romance, Action, Drama, Sci-Fi).
+   - Automated startup database synchronization via `MovieDataInitializer` (`CommandLineRunner`).
 
 ---
 
