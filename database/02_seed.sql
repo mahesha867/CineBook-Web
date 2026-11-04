@@ -13,15 +13,19 @@ VALUES (1, 1000)
 ON DUPLICATE KEY UPDATE next_val = next_val;
 
 -- ---------------------------------------------------------------------
--- Seed Screens
+-- Seed Screens (3 Auditoriums)
 -- ---------------------------------------------------------------------
 INSERT INTO screens (screen_id, screen_name, total_rows, seats_per_row) VALUES
 (1, 'Screen 1 - IMAX Laser', 5, 10),
-(2, 'Screen 2 - Dolby Atmos', 5, 10)
-ON DUPLICATE KEY UPDATE screen_name = VALUES(screen_name);
+(2, 'Screen 2 - Dolby Atmos', 5, 10),
+(3, 'Screen 3 - 4DX Premiere', 5, 10)
+ON DUPLICATE KEY UPDATE 
+    screen_name = VALUES(screen_name),
+    total_rows = VALUES(total_rows),
+    seats_per_row = VALUES(seats_per_row);
 
 -- ---------------------------------------------------------------------
--- Seed Seats for Screen 1 & Screen 2
+-- Seed Seats for Screen 1, Screen 2 & Screen 3
 -- Rows A-B: REGULAR (Rs. 150)
 -- Rows C-D: PREMIUM (Rs. 250)
 -- Row E: VIP (Rs. 400)
@@ -48,7 +52,18 @@ INSERT IGNORE INTO seats (screen_id, row_char, seat_num, tier) VALUES
 (2, 'D', 1, 'PREMIUM'), (2, 'D', 2, 'PREMIUM'), (2, 'D', 3, 'PREMIUM'), (2, 'D', 4, 'PREMIUM'), (2, 'D', 5, 'PREMIUM'),
 (2, 'D', 6, 'PREMIUM'), (2, 'D', 7, 'PREMIUM'), (2, 'D', 8, 'PREMIUM'), (2, 'D', 9, 'PREMIUM'), (2, 'D', 10, 'PREMIUM'),
 (2, 'E', 1, 'VIP'),     (2, 'E', 2, 'VIP'),     (2, 'E', 3, 'VIP'),     (2, 'E', 4, 'VIP'),     (2, 'E', 5, 'VIP'),
-(2, 'E', 6, 'VIP'),     (2, 'E', 7, 'VIP'),     (2, 'E', 8, 'VIP'),     (2, 'E', 9, 'VIP'),     (2, 'E', 10, 'VIP');
+(2, 'E', 6, 'VIP'),     (2, 'E', 7, 'VIP'),     (2, 'E', 8, 'VIP'),     (2, 'E', 9, 'VIP'),     (2, 'E', 10, 'VIP'),
+-- Screen 3
+(3, 'A', 1, 'REGULAR'), (3, 'A', 2, 'REGULAR'), (3, 'A', 3, 'REGULAR'), (3, 'A', 4, 'REGULAR'), (3, 'A', 5, 'REGULAR'),
+(3, 'A', 6, 'REGULAR'), (3, 'A', 7, 'REGULAR'), (3, 'A', 8, 'REGULAR'), (3, 'A', 9, 'REGULAR'), (3, 'A', 10, 'REGULAR'),
+(3, 'B', 1, 'REGULAR'), (3, 'B', 2, 'REGULAR'), (3, 'B', 3, 'REGULAR'), (3, 'B', 4, 'REGULAR'), (3, 'B', 5, 'REGULAR'),
+(3, 'B', 6, 'REGULAR'), (3, 'B', 7, 'REGULAR'), (3, 'B', 8, 'REGULAR'), (3, 'B', 9, 'REGULAR'), (3, 'B', 10, 'REGULAR'),
+(3, 'C', 1, 'PREMIUM'), (3, 'C', 2, 'PREMIUM'), (3, 'C', 3, 'PREMIUM'), (3, 'C', 4, 'PREMIUM'), (3, 'C', 5, 'PREMIUM'),
+(3, 'C', 6, 'PREMIUM'), (3, 'C', 7, 'PREMIUM'), (3, 'C', 8, 'PREMIUM'), (3, 'C', 9, 'PREMIUM'), (3, 'C', 10, 'PREMIUM'),
+(3, 'D', 1, 'PREMIUM'), (3, 'D', 2, 'PREMIUM'), (3, 'D', 3, 'PREMIUM'), (3, 'D', 4, 'PREMIUM'), (3, 'D', 5, 'PREMIUM'),
+(3, 'D', 6, 'PREMIUM'), (3, 'D', 7, 'PREMIUM'), (3, 'D', 8, 'PREMIUM'), (3, 'D', 9, 'PREMIUM'), (3, 'D', 10, 'PREMIUM'),
+(3, 'E', 1, 'VIP'),     (3, 'E', 2, 'VIP'),     (3, 'E', 3, 'VIP'),     (3, 'E', 4, 'VIP'),     (3, 'E', 5, 'VIP'),
+(3, 'E', 6, 'VIP'),     (3, 'E', 7, 'VIP'),     (3, 'E', 8, 'VIP'),     (3, 'E', 9, 'VIP'),     (3, 'E', 10, 'VIP');
 
 -- ---------------------------------------------------------------------
 -- Seed Movies (Hi Nanna, Dear Comrade, Avengers Endgame, Spider-Man Brand New Day, Jananayagan, Sita Ramam)
@@ -69,24 +84,44 @@ ON DUPLICATE KEY UPDATE
     description = VALUES(description);
 
 -- ---------------------------------------------------------------------
--- Seed Shows (Dynamic showtimes spanning current and upcoming days)
+-- Seed Shows (2-3 screens available for every movie)
 -- ---------------------------------------------------------------------
 INSERT INTO shows (show_id, movie_id, screen_id, show_time, base_price_multiplier) VALUES
--- Screen 1 (IMAX Laser)
-(1, 1, 1, DATE_ADD(CURRENT_DATE(), INTERVAL 10 HOUR), 1.00), -- Hi Nanna 10:00 AM
-(2, 1, 1, DATE_ADD(CURRENT_DATE(), INTERVAL 14 HOUR), 1.00), -- Hi Nanna 02:00 PM
-(3, 3, 1, DATE_ADD(CURRENT_DATE(), INTERVAL 18 HOUR), 1.15), -- Avengers: Endgame 06:00 PM (Prime)
-(4, 5, 1, DATE_ADD(CURRENT_DATE(), INTERVAL 22 HOUR), 0.90), -- Jananayagan 10:00 PM (Late Night)
--- Screen 2 (Dolby Atmos)
-(5, 2, 2, DATE_ADD(CURRENT_DATE(), INTERVAL 11 HOUR), 1.00), -- Dear Comrade 11:00 AM
-(6, 6, 2, DATE_ADD(CURRENT_DATE(), INTERVAL 15 HOUR), 1.00), -- Sita Ramam 03:00 PM
-(7, 4, 2, DATE_ADD(CURRENT_DATE(), INTERVAL 19 HOUR), 1.15), -- Spider-Man: Brand New Day 07:00 PM (Prime)
-(8, 2, 2, DATE_ADD(CURRENT_DATE(), INTERVAL 23 HOUR), 0.90), -- Dear Comrade 11:00 PM (Late Night)
--- Tomorrow Screenings
-(9, 6, 1, DATE_ADD(DATE_ADD(CURRENT_DATE(), INTERVAL 1 DAY), INTERVAL 14 HOUR), 1.00), -- Sita Ramam (Tomorrow 02:00 PM)
-(10, 3, 1, DATE_ADD(DATE_ADD(CURRENT_DATE(), INTERVAL 1 DAY), INTERVAL 18 HOUR), 1.15), -- Avengers: Endgame (Tomorrow 06:00 PM)
-(11, 5, 2, DATE_ADD(DATE_ADD(CURRENT_DATE(), INTERVAL 1 DAY), INTERVAL 16 HOUR), 1.00), -- Jananayagan (Tomorrow 04:00 PM)
-(12, 4, 2, DATE_ADD(DATE_ADD(CURRENT_DATE(), INTERVAL 1 DAY), INTERVAL 20 HOUR), 1.15)  -- Spider-Man: Brand New Day (Tomorrow 08:00 PM)
+-- Movie 1: Hi Nanna (Screens 1, 2, 3)
+(1,  1, 1, DATE_ADD(NOW(), INTERVAL 2 HOUR), 1.00),
+(2,  1, 2, DATE_ADD(NOW(), INTERVAL 6 HOUR), 1.15),
+(3,  1, 3, DATE_ADD(DATE_ADD(CURRENT_DATE(), INTERVAL 1 DAY), INTERVAL 14 HOUR), 1.00),
+(19, 1, 3, DATE_ADD(NOW(), INTERVAL 9 HOUR), 0.90),
+
+-- Movie 2: Dear Comrade (Screens 1, 2, 3)
+(4,  2, 1, DATE_ADD(NOW(), INTERVAL 3 HOUR), 1.00),
+(5,  2, 2, DATE_ADD(NOW(), INTERVAL 7 HOUR), 1.15),
+(6,  2, 3, DATE_ADD(DATE_ADD(CURRENT_DATE(), INTERVAL 1 DAY), INTERVAL 15 HOUR), 1.00),
+(20, 2, 1, DATE_ADD(DATE_ADD(CURRENT_DATE(), INTERVAL 1 DAY), INTERVAL 19 HOUR), 1.15),
+
+-- Movie 3: Avengers: Endgame (Screens 1, 2, 3)
+(7,  3, 1, DATE_ADD(NOW(), INTERVAL 4 HOUR), 1.15),
+(8,  3, 2, DATE_ADD(NOW(), INTERVAL 8 HOUR), 1.00),
+(9,  3, 3, DATE_ADD(DATE_ADD(CURRENT_DATE(), INTERVAL 1 DAY), INTERVAL 18 HOUR), 1.15),
+(21, 3, 2, DATE_ADD(DATE_ADD(CURRENT_DATE(), INTERVAL 1 DAY), INTERVAL 21 HOUR), 1.15),
+
+-- Movie 4: Spider-Man: Brand New Day (Screens 1, 2, 3)
+(10, 4, 1, DATE_ADD(NOW(), INTERVAL 2 HOUR + INTERVAL 30 MINUTE), 1.00),
+(11, 4, 2, DATE_ADD(NOW(), INTERVAL 5 HOUR + INTERVAL 30 MINUTE), 1.00),
+(12, 4, 3, DATE_ADD(DATE_ADD(CURRENT_DATE(), INTERVAL 1 DAY), INTERVAL 16 HOUR), 1.00),
+(22, 4, 3, DATE_ADD(NOW(), INTERVAL 7 HOUR + INTERVAL 30 MINUTE), 1.15),
+
+-- Movie 5: Jananayagan (Screens 1, 2, 3)
+(13, 5, 1, DATE_ADD(NOW(), INTERVAL 3 HOUR + INTERVAL 30 MINUTE), 1.00),
+(14, 5, 2, DATE_ADD(NOW(), INTERVAL 7 HOUR + INTERVAL 30 MINUTE), 1.15),
+(15, 5, 3, DATE_ADD(DATE_ADD(CURRENT_DATE(), INTERVAL 1 DAY), INTERVAL 20 HOUR), 0.90),
+(23, 5, 1, DATE_ADD(DATE_ADD(CURRENT_DATE(), INTERVAL 1 DAY), INTERVAL 17 HOUR), 1.00),
+
+-- Movie 6: Sita Ramam (Screens 1, 2, 3)
+(16, 6, 1, DATE_ADD(NOW(), INTERVAL 4 HOUR + INTERVAL 30 MINUTE), 1.00),
+(17, 6, 2, DATE_ADD(NOW(), INTERVAL 8 HOUR + INTERVAL 30 MINUTE), 1.00),
+(18, 6, 3, DATE_ADD(DATE_ADD(CURRENT_DATE(), INTERVAL 1 DAY), INTERVAL 11 HOUR), 1.00),
+(24, 6, 2, DATE_ADD(DATE_ADD(CURRENT_DATE(), INTERVAL 1 DAY), INTERVAL 13 HOUR), 1.00)
 ON DUPLICATE KEY UPDATE 
     movie_id = VALUES(movie_id),
     screen_id = VALUES(screen_id),
