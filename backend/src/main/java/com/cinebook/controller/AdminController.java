@@ -44,6 +44,16 @@ public class AdminController {
                 .body(ApiResponse.error("Invalid administrator credentials"));
     }
 
+    @GetMapping("/shows")
+    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getAdminShows() {
+        return ResponseEntity.ok(ApiResponse.ok(analyticsService.getAdminShowsOverview()));
+    }
+
+    @GetMapping("/shows/{showId}/booked-seats")
+    public ResponseEntity<ApiResponse<List<Map<String, Object>>>> getBookedSeatsForShow(@PathVariable int showId) {
+        return ResponseEntity.ok(ApiResponse.ok(analyticsService.getBookedSeatsForShow(showId)));
+    }
+
     @GetMapping("/analytics/summary")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getKpiSummary() {
         return ResponseEntity.ok(ApiResponse.ok(analyticsService.getKpiSummary()));
@@ -74,4 +84,3 @@ public class AdminController {
         return ResponseEntity.ok(ApiResponse.ok(analyticsService.getRecentAuditLogs(limit)));
     }
 }
-

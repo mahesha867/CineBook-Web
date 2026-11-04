@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.Map;
 
 /**
- * Plain JDBC Implementation of AnalyticsDao querying custom MySQL Views and Window Functions.
+ * Plain JDBC Implementation of AnalyticsDao querying custom MySQL Views, Window Functions, and Relational Joins.
  */
 @Repository
 public class AnalyticsDaoImpl implements AnalyticsDao {
@@ -81,5 +81,74 @@ public class AnalyticsDaoImpl implements AnalyticsDao {
         """;
         return jdbcTemplate.queryForList(sql);
     }
-}
 
+    @Override
+    public List<Map<String, Object>> getAdminShowsOverview() {
+        String sql = """
+            SELECT 
+                s.show_id,
+                s.movie_id,
+                m.title AS movie_title,
+                m.poster_url,
+                m.genre,
+                m.duration_mins,
+                m.rating,
+                s.screen_id,
+                sc.screen_name,
+                s.show_time,
+                s.base_price_multiplier,
+                s.is_cancelled,
+                (sc.total_rows * sc.seats_per_row) AS total_capacity,
+                COALESCE(booked_data.booked_seats, 0) AS booked_seats,
+                COALESCE(held_data.held_seats, 0) AS held_seats,
+                ROUND((COALESCE(booked_data.booked_seats, 0) / (sc.total_rows * sc.seats_per_row)) * 100, 2) AS occupancy_percent
+            FROM shows s
+            JOIN movies m ON s.movie_id = m.movie_id
+            JOIN screens sc ON s.screen_id = sc.screen_id
+            LEFT JOIN (
+                SELECT b.show_id, COUNT(bs.seat_id) AS booked_seats
+                FROM bookings b
+                JOIN booking_seats bs ON b.booking_id = bs.booking_id
+                WHERE b.status = 'CONFIRMED'
+                GROUP BY b.show_id
+            ) booked_data ON s.show_id = booked_data.show_id
+            LEFT JOIN (
+                SELECT sh.show_id, COUNT(sh.seat_id) AS held_seats
+                FROM seat_holds sh
+                WHERE sh.expires_at > NOW()
+                GROUP BY sh.show_id
+            ) held_data ON s.show_id = held_data.show_id
+            ORDER BY s.show_time ASC
+        """;
+        return jdbcTemplate.queryForList(sql);
+    }
+
+    @Override
+    public List<Map<String, Object>> getBookedSeatsForShow(int showId) {
+        String sql = """
+            SELECT 
+                bs.booking_seat_id,
+                bs.booking_id,
+                bs.show_id,
+                bs.seat_id,
+                s.row_char,
+                s.seat_num,
+                CONCAT(s.row_char, s.seat_num) AS seat_code,
+                bs.seat_tier,
+                bs.unit_price,
+                b.booking_time,
+                b.status AS booking_status,
+                u.user_id,
+                u.full_name AS customer_name,
+                u.email AS customer_email,
+                u.phone AS customer_phone
+            FROM booking_seats bs
+            JOIN bookings b ON bs.booking_id = b.booking_id
+            JOIN seats s ON bs.seat_id = s.seat_id
+            JOIN users u ON b.user_id = u.user_id
+            WHERE bs.show_id = ? AND b.status = 'CONFIRMED'
+            ORDER BY s.row_char ASC, s.seat_num ASC
+        """;
+        return jdbcTemplate.queryForList(sql, showId);
+    }
+}

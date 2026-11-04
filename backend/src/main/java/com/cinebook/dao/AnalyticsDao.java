@@ -10,5 +10,6 @@ public interface AnalyticsDao {
     List<Map<String, Object>> getShowOccupancyStats();
     List<Map<String, Object>> getTopSellingSnacks();
     List<Map<String, Object>> getPeakBookingHours();
+    List<Map<String, Object>> getAdminShowsOverview();
+    List<Map<String, Object>> getBookedSeatsForShow(int showId);
 }
-

@@ -44,5 +44,12 @@ public class AnalyticsService {
     public List<AuditLogEntry> getRecentAuditLogs(int limit) {
         return auditLogDao.findRecentLogs(limit);
     }
-}
 
+    public List<Map<String, Object>> getAdminShowsOverview() {
+        return analyticsDao.getAdminShowsOverview();
+    }
+
+    public List<Map<String, Object>> getBookedSeatsForShow(int showId) {
+        return analyticsDao.getBookedSeatsForShow(showId);
+    }
+}

@@ -161,6 +161,8 @@ All endpoints return uniform JSON envelopes (`ApiResponse<T>`):
 | **Bookings** | `POST /api/bookings` | Executes transactional reservation and returns ZXing QR pass |
 | **Lookup** | `GET /api/bookings/{id}` | Boarding pass retrieval by Booking ID, Phone, or Email |
 | **Cancellation** | `POST /api/bookings/{id}/cancel` | Invokes stored procedure `sp_cancel_booking` for 80% refund |
+| **Admin Shows** | `GET /api/admin/shows` | Returns all upcoming shows with real-time occupancy and movie metadata |
+| **Booked Seats** | `GET /api/admin/shows/{id}/booked-seats` | Returns confirmed booked seats with customer names, contacts, and ticket IDs |
 | **Analytics** | `GET /api/admin/analytics` | Returns real-time KPI metrics and Chart.js aggregation data |
 
 ---

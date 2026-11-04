@@ -3,10 +3,101 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CineBook Web — Executive Analytics &amp; DBMS Audit</title>
+  <title>CineBook Web — Executive Analytics &amp; Admin Portal</title>
   <link rel="stylesheet" href="/css/styles.css">
   <!-- Chart.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+  <style>
+    /* Scoped Admin Enhancements */
+    .admin-tab {
+      padding: 0.65rem 1.25rem;
+      background: transparent;
+      border: none;
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+      transition: var(--transition);
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      white-space: nowrap;
+    }
+    .admin-tab:hover {
+      color: #fff;
+    }
+    .admin-tab.active {
+      color: var(--accent-cyan);
+      border-bottom: 2px solid var(--accent-cyan);
+    }
+    .show-card-admin {
+      background: var(--bg-card);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-md);
+      padding: 0.9rem 1.1rem;
+      cursor: pointer;
+      transition: var(--transition);
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+      position: relative;
+    }
+    .show-card-admin:hover {
+      background: var(--bg-card-hover);
+      border-color: rgba(6, 182, 212, 0.4);
+      transform: translateY(-2px);
+    }
+    .show-card-admin.active {
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 15px var(--accent-cyan-glow);
+      background: rgba(6, 182, 212, 0.08);
+    }
+    .seat.admin-booked {
+      background: #dc2626 !important;
+      border-color: #ef4444 !important;
+      color: #fff !important;
+      box-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
+      cursor: pointer !important;
+    }
+    .seat.admin-booked:hover {
+      transform: scale(1.2);
+      z-index: 10;
+    }
+    .seat.admin-held {
+      background: #f59e0b !important;
+      border-color: #fbbf24 !important;
+      color: #0b0e14 !important;
+      cursor: pointer !important;
+    }
+    .seat.admin-available {
+      cursor: pointer !important;
+    }
+    .seat.admin-available:hover {
+      transform: scale(1.15);
+    }
+    /* Modal / Popover Styling */
+    .seat-modal-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.7);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      backdrop-filter: blur(4px);
+    }
+    .seat-modal-card {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border-color);
+      border-radius: var(--radius-lg);
+      padding: 1.75rem;
+      max-width: 480px;
+      width: 90%;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.8);
+      position: relative;
+    }
+  </style>
 </head>
 <body>
   <header class="navbar">
@@ -25,7 +116,7 @@
     <!-- Login Gate (shown if not authenticated) -->
     <div id="loginGate" style="max-width: 420px; margin: 4rem auto; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 2rem; box-shadow: var(--shadow-card);">
       <h2 style="color: #fff; font-size: 1.5rem; margin-bottom: 0.5rem; text-align: center;">🔐 Admin Sign-In</h2>
-      <p style="color: var(--text-secondary); font-size: 0.85rem; text-align: center; margin-bottom: 1.5rem;">Access SQL view analytics and trigger audit logs</p>
+      <p style="color: var(--text-secondary); font-size: 0.85rem; text-align: center; margin-bottom: 1.5rem;">Access Cinema Operations, Shows, Booked Seats &amp; DBMS Analytics</p>
 
       <form id="adminLoginForm" onsubmit="return false;" style="display: flex; flex-direction: column; gap: 1rem;">
         <div>
@@ -44,98 +135,272 @@
 
     <!-- Authenticated Dashboard View (hidden until login) -->
     <div id="dashboardView" style="display: none;">
-      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 2rem;">
+      <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem;">
         <div>
-          <h1 style="font-size: 2rem; color: #fff; margin-bottom: 0.25rem;">Cinema Intelligence &amp; DBMS Audit</h1>
-          <p style="color: var(--text-secondary); font-size: 0.95rem;">Powered by MySQL 8 Views, Window Functions (DENSE_RANK), and Audit Triggers</p>
+          <h1 style="font-size: 2rem; color: #fff; margin-bottom: 0.25rem;">Cinema Intelligence &amp; Operations Portal</h1>
+          <p style="color: var(--text-secondary); font-size: 0.95rem;">Manage available shows, inspect real-time booked seats, and audit DBMS analytics</p>
         </div>
-        <button class="btn btn-secondary" onclick="loadAllAnalytics()">🔄 Refresh Analytics</button>
+        <button class="btn btn-secondary" onclick="refreshCurrentTab()">🔄 Refresh Data</button>
       </div>
 
-      <!-- High-Level KPI Summary Cards -->
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-label">Net Realized Revenue</div>
-          <div class="stat-value" id="kpiNetRev" style="color: var(--accent-emerald);">Rs. 0.00</div>
-          <div style="font-size: 0.75rem; color: var(--text-muted);">After accounting for 80% refunds</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Average Occupancy Rate</div>
-          <div class="stat-value" id="kpiAvgOcc" style="color: var(--accent-cyan);">0%</div>
-          <div style="font-size: 0.75rem; color: var(--text-muted);">Across all screen showtimes</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Confirmed Bookings</div>
-          <div class="stat-value" id="kpiConfirmed" style="color: var(--accent-gold);">0</div>
-          <div style="font-size: 0.75rem; color: var(--text-muted);" id="kpiTotalBookings">Total reservations created</div>
-        </div>
-        <div class="stat-card">
-          <div class="stat-label">Cancellation Rate</div>
-          <div class="stat-value" id="kpiCancelRate" style="color: var(--accent-rose);">0%</div>
-          <div style="font-size: 0.75rem; color: var(--text-muted);" id="kpiRefundsIssued">Refunds Issued: Rs. 0.00</div>
-        </div>
+      <!-- Navigation Tabs -->
+      <div style="display: flex; gap: 0.75rem; margin-bottom: 2rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.5rem; overflow-x: auto;">
+        <button class="admin-tab active" id="tabBtnShows" onclick="switchAdminTab('shows')">🎬 Available Shows &amp; Booked Seats</button>
+        <button class="admin-tab" id="tabBtnAnalytics" onclick="switchAdminTab('analytics')">📊 Executive Analytics &amp; Charts</button>
+        <button class="admin-tab" id="tabBtnAudit" onclick="switchAdminTab('audit')">🛡️ Trigger Audit Trail</button>
       </div>
 
-      <!-- Analytical Charts Grid -->
-      <div class="charts-grid">
-        <!-- Chart 1: Revenue by Movie (View: v_movie_revenue_analytics) -->
-        <div class="chart-card">
-          <div class="chart-title">🎬 Movie Revenue Breakdown (Tickets vs. Snacks)</div>
-          <canvas id="movieRevChart" height="260"></canvas>
-        </div>
-
-        <!-- Chart 2: Seat Occupancy per Show (View: v_show_occupancy) -->
-        <div class="chart-card">
-          <div class="chart-title">🎟 Show Occupancy Rates (%)</div>
-          <canvas id="occupancyChart" height="260"></canvas>
-        </div>
-
-        <!-- Chart 3: Top Concessions (View: v_top_selling_snacks using DENSE_RANK) -->
-        <div class="chart-card">
-          <div class="chart-title">🍿 Concessions Sales Rank (Window Function)</div>
-          <canvas id="topSnacksChart" height="260"></canvas>
-        </div>
-
-        <!-- Chart 4: Peak Booking Hours Distribution -->
-        <div class="chart-card">
-          <div class="chart-title">⏰ Peak Booking Hours Distribution</div>
-          <canvas id="peakHoursChart" height="260"></canvas>
-        </div>
-      </div>
-
-      <!-- Audit Trail Table (Trigger Showcase) -->
-      <div class="breakdown-card" style="margin-top: 2rem;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
-          <div>
-            <h3 style="color: #fff; font-size: 1.2rem;">🛡 Database Trigger Audit Trail</h3>
-            <p style="color: var(--text-secondary); font-size: 0.85rem;">Automatically populated by MySQL AFTER INSERT / AFTER UPDATE triggers on `bookings` table.</p>
+      <!-- =====================================================================
+           TAB 1: AVAILABLE SHOWS & BOOKED SEATS INSPECTOR
+           ===================================================================== -->
+      <div id="tabContentShows">
+        <!-- Filter Controls -->
+        <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1rem 1.25rem; margin-bottom: 1.5rem; display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; justify-content: space-between;">
+          <div style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; flex: 1;">
+            <div>
+              <label style="font-size: 0.8rem; color: var(--text-secondary); display: block; margin-bottom: 0.25rem;">Filter by Movie</label>
+              <select id="adminMovieFilter" class="search-input" style="min-width: 220px; padding: 0.5rem 0.75rem;" onchange="filterAdminShows()">
+                <option value="ALL">All Movies (All Shows)</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size: 0.8rem; color: var(--text-secondary); display: block; margin-bottom: 0.25rem;">Search Show / Screen</label>
+              <input type="text" id="adminShowSearch" placeholder="Search title or screen..." class="search-input" style="min-width: 200px; padding: 0.5rem 0.75rem;" oninput="filterAdminShows()">
+            </div>
           </div>
-          <span class="badge badge-info" id="auditCountBadge">0 Logs</span>
+          <div style="display: flex; gap: 0.5rem; align-items: center;">
+            <span class="badge badge-info" id="adminShowsCountBadge">0 Shows</span>
+          </div>
         </div>
 
-        <div style="overflow-x: auto;">
-          <table class="data-table">
-            <thead>
-              <tr>
-                <th>Log ID</th>
-                <th>Action Type</th>
-                <th>Table</th>
-                <th>Record ID</th>
-                <th>Timestamp</th>
-                <th>Snapshot JSON Details</th>
-              </tr>
-            </thead>
-            <tbody id="auditTableBody">
-              <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Loading audit trail...</td></tr>
-            </tbody>
-          </table>
+        <!-- Master-Detail Layout -->
+        <div style="display: grid; grid-template-columns: minmax(320px, 1fr) minmax(450px, 1.4fr); gap: 1.5rem; align-items: start;">
+          
+          <!-- Left Column: Shows List -->
+          <div>
+            <h3 style="color: #fff; font-size: 1.15rem; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.5rem;">
+              <span>🎥 Scheduled Screenings</span>
+            </h3>
+            <div id="adminShowsList" style="display: flex; flex-direction: column; gap: 0.75rem; max-height: 750px; overflow-y: auto; padding-right: 0.25rem;">
+              <div style="text-align: center; color: var(--text-muted); padding: 2rem;">Loading upcoming shows...</div>
+            </div>
+          </div>
+
+          <!-- Right Column: Interactive Seat Map & Booked Seats Roster -->
+          <div id="adminSeatInspectorPanel" style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 1.5rem; box-shadow: var(--shadow-card);">
+            <div id="inspectorEmptyState" style="text-align: center; padding: 4rem 1rem; color: var(--text-muted);">
+              <div style="font-size: 3rem; margin-bottom: 0.5rem;">💺</div>
+              <p style="font-size: 1.1rem; color: #fff; margin-bottom: 0.5rem;">Select a Show to Inspect Seats</p>
+              <p style="font-size: 0.85rem;">Click on any scheduled screening from the left to view real-time booked seats and customer reservation details.</p>
+            </div>
+
+            <div id="inspectorContent" style="display: none;">
+              <!-- Header info of selected show -->
+              <div style="border-bottom: 1px solid var(--border-color); padding-bottom: 1rem; margin-bottom: 1.25rem;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 0.5rem;">
+                  <div>
+                    <h2 id="inspectMovieTitle" style="color: #fff; font-size: 1.4rem; margin-bottom: 0.25rem;">Movie Title</h2>
+                    <p id="inspectShowMeta" style="color: var(--text-secondary); font-size: 0.85rem;">Screen 1 • Show Time</p>
+                  </div>
+                  <div id="inspectMultiplierBadge"></div>
+                </div>
+
+                <!-- Mini KPI Pills -->
+                <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1rem;">
+                  <div style="background: rgba(255,255,255,0.05); padding: 0.4rem 0.8rem; border-radius: var(--radius-sm); font-size: 0.8rem;">
+                    <span style="color: var(--text-muted);">Capacity:</span> <strong id="inspectTotalCap" style="color: #fff;">0</strong>
+                  </div>
+                  <div style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); padding: 0.4rem 0.8rem; border-radius: var(--radius-sm); font-size: 0.8rem;">
+                    <span style="color: #fca5a5;">Booked Seats:</span> <strong id="inspectBookedCount" style="color: #ef4444;">0</strong>
+                  </div>
+                  <div style="background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.3); padding: 0.4rem 0.8rem; border-radius: var(--radius-sm); font-size: 0.8rem;">
+                    <span style="color: #6ee7b7;">Available Seats:</span> <strong id="inspectAvailCount" style="color: #10b981;">0</strong>
+                  </div>
+                  <div style="background: rgba(245, 158, 11, 0.15); border: 1px solid rgba(245, 158, 11, 0.3); padding: 0.4rem 0.8rem; border-radius: var(--radius-sm); font-size: 0.8rem;">
+                    <span style="color: #fde68a;">Held (5m Lock):</span> <strong id="inspectHeldCount" style="color: #f59e0b;">0</strong>
+                  </div>
+                  <div style="background: rgba(6, 182, 212, 0.15); border: 1px solid rgba(6, 182, 212, 0.3); padding: 0.4rem 0.8rem; border-radius: var(--radius-sm); font-size: 0.8rem;">
+                    <span style="color: #67e8f9;">Occupancy:</span> <strong id="inspectOccupancy" style="color: #06b6d4;">0%</strong>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Interactive Seat Matrix -->
+              <div>
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                  <h4 style="color: #fff; font-size: 0.95rem;">Auditorium Seat Map</h4>
+                  <span style="font-size: 0.75rem; color: var(--text-muted);">Click any seat to inspect booking details</span>
+                </div>
+
+                <!-- Screen Indicator -->
+                <div class="screen-indicator">
+                  <div class="screen-bar"></div>
+                  <div class="screen-text">SCREEN THIS WAY</div>
+                </div>
+
+                <!-- Seat Grid -->
+                <div class="seat-map-wrapper" style="padding: 1rem 0;">
+                  <div class="seat-grid" id="adminSeatGrid"></div>
+                </div>
+
+                <!-- Seat Map Legend -->
+                <div class="seat-legend" style="justify-content: center; gap: 1rem; margin-top: 0.5rem; padding: 0.5rem; background: rgba(0,0,0,0.2); border-radius: var(--radius-sm);">
+                  <div class="legend-item"><div class="legend-box" style="background: #dc2626;"></div> Booked (Red)</div>
+                  <div class="legend-item"><div class="legend-box" style="background: #f59e0b;"></div> Held (Amber)</div>
+                  <div class="legend-item"><div class="legend-box" style="background: #1e293b; border: 1px solid var(--accent-cyan);"></div> Regular (A-B)</div>
+                  <div class="legend-item"><div class="legend-box" style="background: #231d38; border: 1px solid var(--accent-purple);"></div> Premium (C-D)</div>
+                  <div class="legend-item"><div class="legend-box" style="background: #2d2310; border: 1px solid var(--accent-gold);"></div> VIP Recliner (E)</div>
+                </div>
+              </div>
+
+              <!-- Booked Seats Customer Roster Table -->
+              <div style="margin-top: 2rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+                  <h4 style="color: #fff; font-size: 1.05rem; display: flex; align-items: center; gap: 0.5rem;">
+                    <span>📋 Booked Seats Customer Roster</span>
+                    <span class="badge badge-danger" id="rosterCountBadge">0 Booked</span>
+                  </h4>
+                  <input type="text" id="rosterSearch" placeholder="Search customer, booking ID..." class="search-input" style="font-size: 0.8rem; padding: 0.35rem 0.65rem;" oninput="filterRosterTable()">
+                </div>
+
+                <div style="overflow-x: auto; max-height: 320px; overflow-y: auto;">
+                  <table class="data-table" style="font-size: 0.8rem;">
+                    <thead>
+                      <tr>
+                        <th>Seat</th>
+                        <th>Tier</th>
+                        <th>Booking ID</th>
+                        <th>Customer Name</th>
+                        <th>Phone</th>
+                        <th>Email</th>
+                        <th>Unit Price</th>
+                        <th>Booked At</th>
+                      </tr>
+                    </thead>
+                    <tbody id="adminBookedSeatsTableBody">
+                      <tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">No booked seats for this screening.</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
         </div>
       </div>
+
+      <!-- =====================================================================
+           TAB 2: EXECUTIVE ANALYTICS & CHARTS
+           ===================================================================== -->
+      <div id="tabContentAnalytics" style="display: none;">
+        <!-- High-Level KPI Summary Cards -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-label">Net Realized Revenue</div>
+            <div class="stat-value" id="kpiNetRev" style="color: var(--accent-emerald);">Rs. 0.00</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted);">After accounting for 80% refunds</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Average Occupancy Rate</div>
+            <div class="stat-value" id="kpiAvgOcc" style="color: var(--accent-cyan);">0%</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted);">Across all screen showtimes</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Confirmed Bookings</div>
+            <div class="stat-value" id="kpiConfirmed" style="color: var(--accent-gold);">0</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted);" id="kpiTotalBookings">Total reservations created</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Cancellation Rate</div>
+            <div class="stat-value" id="kpiCancelRate" style="color: var(--accent-rose);">0%</div>
+            <div style="font-size: 0.75rem; color: var(--text-muted);" id="kpiRefundsIssued">Refunds Issued: Rs. 0.00</div>
+          </div>
+        </div>
+
+        <!-- Analytical Charts Grid -->
+        <div class="charts-grid">
+          <!-- Chart 1: Revenue by Movie (View: v_movie_revenue_analytics) -->
+          <div class="chart-card">
+            <div class="chart-title">🎬 Movie Revenue Breakdown (Tickets vs. Snacks)</div>
+            <canvas id="movieRevChart" height="260"></canvas>
+          </div>
+
+          <!-- Chart 2: Seat Occupancy per Show (View: v_show_occupancy) -->
+          <div class="chart-card">
+            <div class="chart-title">🎟 Show Occupancy Rates (%)</div>
+            <canvas id="occupancyChart" height="260"></canvas>
+          </div>
+
+          <!-- Chart 3: Top Concessions (View: v_top_selling_snacks using DENSE_RANK) -->
+          <div class="chart-card">
+            <div class="chart-title">🍿 Concessions Sales Rank (Window Function)</div>
+            <canvas id="topSnacksChart" height="260"></canvas>
+          </div>
+
+          <!-- Chart 4: Peak Booking Hours Distribution -->
+          <div class="chart-card">
+            <div class="chart-title">⏰ Peak Booking Hours Distribution</div>
+            <canvas id="peakHoursChart" height="260"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- =====================================================================
+           TAB 3: DATABASE TRIGGER AUDIT TRAIL
+           ===================================================================== -->
+      <div id="tabContentAudit" style="display: none;">
+        <div class="breakdown-card">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.25rem;">
+            <div>
+              <h3 style="color: #fff; font-size: 1.2rem;">🛡 Database Trigger Audit Trail</h3>
+              <p style="color: var(--text-secondary); font-size: 0.85rem;">Automatically populated by MySQL AFTER INSERT / AFTER UPDATE triggers on `bookings` table.</p>
+            </div>
+            <span class="badge badge-info" id="auditCountBadge">0 Logs</span>
+          </div>
+
+          <div style="overflow-x: auto;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Log ID</th>
+                  <th>Action Type</th>
+                  <th>Table</th>
+                  <th>Record ID</th>
+                  <th>Timestamp</th>
+                  <th>Snapshot JSON Details</th>
+                </tr>
+              </thead>
+              <tbody id="auditTableBody">
+                <tr><td colspan="6" style="text-align: center; color: var(--text-muted);">Loading audit trail...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
     </div>
   </main>
 
+  <!-- Seat Inspector Modal -->
+  <div id="seatModal" class="seat-modal-overlay" style="display: none;" onclick="closeSeatModal(event)">
+    <div class="seat-modal-card" onclick="event.stopPropagation()">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem;">
+        <h3 id="modalSeatTitle" style="color: #fff; font-size: 1.25rem;">Seat Details</h3>
+        <button onclick="closeSeatModal()" style="background: none; border: none; color: var(--text-muted); font-size: 1.5rem; cursor: pointer;">&times;</button>
+      </div>
+      <div id="modalSeatBody"></div>
+    </div>
+  </div>
+
   <script src="/js/app.js"></script>
   <script>
+    let currentTab = 'shows';
+    let allShowsData = [];
+    let currentSelectedShowId = null;
+    let currentBookedSeatsMap = {}; // seatId -> bookingDetails
+    let currentRosterList = [];
+
     let movieRevChart = null;
     let occupancyChart = null;
     let topSnacksChart = null;
@@ -147,7 +412,7 @@
         document.getElementById('loginGate').style.display = 'none';
         document.getElementById('dashboardView').style.display = 'block';
         document.getElementById('logoutLi').style.display = 'block';
-        loadAllAnalytics();
+        loadAdminShows();
       } else {
         document.getElementById('loginGate').style.display = 'block';
         document.getElementById('dashboardView').style.display = 'none';
@@ -177,6 +442,365 @@
       checkAuth();
     });
 
+    function switchAdminTab(tab) {
+      currentTab = tab;
+      document.getElementById('tabBtnShows').classList.toggle('active', tab === 'shows');
+      document.getElementById('tabBtnAnalytics').classList.toggle('active', tab === 'analytics');
+      document.getElementById('tabBtnAudit').classList.toggle('active', tab === 'audit');
+
+      document.getElementById('tabContentShows').style.display = tab === 'shows' ? 'block' : 'none';
+      document.getElementById('tabContentAnalytics').style.display = tab === 'analytics' ? 'block' : 'none';
+      document.getElementById('tabContentAudit').style.display = tab === 'audit' ? 'block' : 'none';
+
+      if (tab === 'shows') {
+        loadAdminShows();
+      } else if (tab === 'analytics') {
+        loadAllAnalytics();
+      } else if (tab === 'audit') {
+        loadAuditLogs();
+      }
+    }
+
+    function refreshCurrentTab() {
+      if (currentTab === 'shows') {
+        loadAdminShows();
+        if (currentSelectedShowId) inspectShowSeats(currentSelectedShowId);
+      } else if (currentTab === 'analytics') {
+        loadAllAnalytics();
+      } else if (currentTab === 'audit') {
+        loadAuditLogs();
+      }
+      CineBook.showToast("Refreshed latest data", "info");
+    }
+
+    // =========================================================================
+    // FEATURE: Available Shows & Booked Seats Inspector
+    // =========================================================================
+    async function loadAdminShows() {
+      try {
+        const [showsResp, moviesResp] = await Promise.all([
+          CineBook.fetchApi('/api/admin/shows'),
+          CineBook.fetchApi('/api/movies')
+        ]);
+
+        allShowsData = showsResp.data || [];
+        const movies = moviesResp.data || [];
+
+        // Populate Movie Dropdown
+        const filterEl = document.getElementById('adminMovieFilter');
+        const selectedVal = filterEl.value;
+        filterEl.innerHTML = '<option value="ALL">All Movies (All Shows)</option>';
+        movies.forEach(m => {
+          const opt = document.createElement('option');
+          opt.value = m.movieId;
+          opt.textContent = m.title;
+          filterEl.appendChild(opt);
+        });
+        if (selectedVal && Array.from(filterEl.options).some(o => o.value === selectedVal)) {
+          filterEl.value = selectedVal;
+        }
+
+        filterAdminShows();
+      } catch (err) {
+        console.error("Failed to load shows:", err);
+        CineBook.showToast("Error loading shows: " + err.message, "error");
+      }
+    }
+
+    function filterAdminShows() {
+      const selectedMovie = document.getElementById('adminMovieFilter').value;
+      const query = document.getElementById('adminShowSearch').value.trim().toLowerCase();
+
+      let filtered = allShowsData;
+      if (selectedMovie !== 'ALL') {
+        filtered = filtered.filter(s => String(s.movie_id) === String(selectedMovie));
+      }
+      if (query) {
+        filtered = filtered.filter(s => 
+          (s.movie_title && s.movie_title.toLowerCase().includes(query)) ||
+          (s.screen_name && s.screen_name.toLowerCase().includes(query))
+        );
+      }
+
+      document.getElementById('adminShowsCountBadge').textContent = `${filtered.length} Shows`;
+      renderAdminShowsList(filtered);
+    }
+
+    function renderAdminShowsList(shows) {
+      const listEl = document.getElementById('adminShowsList');
+      if (shows.length === 0) {
+        listEl.innerHTML = '<div style="text-align: center; color: var(--text-muted); padding: 2rem;">No matching shows found.</div>';
+        return;
+      }
+
+      listEl.innerHTML = shows.map(s => {
+        const isActive = s.show_id === currentSelectedShowId;
+        const occ = Number(s.occupancy_percent) || 0;
+        const booked = Number(s.booked_seats) || 0;
+        const total = Number(s.total_capacity) || 50;
+        const occColor = occ > 80 ? 'var(--accent-rose)' : occ > 30 ? 'var(--accent-cyan)' : 'var(--accent-emerald)';
+
+        let multBadge = '';
+        if (Number(s.base_price_multiplier) > 1.0) {
+          multBadge = `<span class="badge badge-warning" style="font-size: 0.7rem;">+${Math.round((s.base_price_multiplier - 1) * 100)}% Surge</span>`;
+        } else if (Number(s.base_price_multiplier) < 1.0) {
+          multBadge = `<span class="badge badge-success" style="font-size: 0.7rem;">-${Math.round((1 - s.base_price_multiplier) * 100)}% Disc</span>`;
+        }
+
+        return `
+          <div class="show-card-admin ${isActive ? 'active' : ''}" onclick="inspectShowSeats(${s.show_id})">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem;">
+              <h4 style="color: #fff; font-size: 0.95rem; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${s.movie_title}</h4>
+              ${multBadge}
+            </div>
+            <div style="font-size: 0.8rem; color: var(--text-secondary); margin: 0.1rem 0;">
+              <span>🖥 ${s.screen_name}</span> &bull; 
+              <span>📅 ${CineBook.formatDateTime(s.show_time)}</span>
+            </div>
+            <!-- Progress Bar -->
+            <div style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.25rem;">
+              <div style="flex: 1; height: 6px; background: rgba(255,255,255,0.1); border-radius: 999px; overflow: hidden;">
+                <div style="width: ${Math.min(100, occ)}%; height: 100%; background: ${occColor};"></div>
+              </div>
+              <span style="font-size: 0.75rem; color: ${occColor}; font-weight: 600; white-space: nowrap;">
+                ${booked}/${total} (${occ}%)
+              </span>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      // Auto-select first show if none selected
+      if (!currentSelectedShowId && shows.length > 0) {
+        inspectShowSeats(shows[0].show_id);
+      }
+    }
+
+    async function inspectShowSeats(showId) {
+      currentSelectedShowId = showId;
+
+      // Update active highlight in shows list
+      const cards = document.querySelectorAll('.show-card-admin');
+      cards.forEach(c => c.classList.remove('active'));
+      const activeCard = Array.from(cards).find(c => c.getAttribute('onclick')?.includes(`inspectShowSeats(${showId})`));
+      if (activeCard) activeCard.classList.add('active');
+
+      document.getElementById('inspectorEmptyState').style.display = 'none';
+      document.getElementById('inspectorContent').style.display = 'block';
+
+      try {
+        const [seatMapResp, bookedResp] = await Promise.all([
+          CineBook.fetchApi(`/api/shows/${showId}/seats`),
+          CineBook.fetchApi(`/api/admin/shows/${showId}/booked-seats`)
+        ]);
+
+        const mapData = seatMapResp.data;
+        const bookedList = bookedResp.data || [];
+        currentRosterList = bookedList;
+
+        // Build index of booked seat details: seatId -> detail
+        currentBookedSeatsMap = {};
+        bookedList.forEach(b => {
+          currentBookedSeatsMap[b.seat_id] = b;
+        });
+
+        // Update show header info
+        document.getElementById('inspectMovieTitle').textContent = mapData.movieTitle;
+        document.getElementById('inspectShowMeta').innerHTML = `
+          <span>🖥 ${mapData.screenName}</span> &bull; 
+          <span>📅 ${CineBook.formatDateTime(mapData.showTime)}</span>
+        `;
+
+        document.getElementById('inspectTotalCap').textContent = mapData.totalCapacity;
+        document.getElementById('inspectBookedCount').textContent = bookedList.length;
+        document.getElementById('inspectAvailCount').textContent = mapData.totalCapacity - bookedList.length - (mapData.heldSeatsCount || 0);
+        document.getElementById('inspectHeldCount').textContent = mapData.heldSeatsCount || 0;
+        document.getElementById('inspectOccupancy').textContent = `${mapData.occupancyPercent}%`;
+
+        // Render visual seat matrix
+        renderAdminSeatGrid(mapData.seats);
+
+        // Render roster table
+        renderBookedSeatsTable(bookedList);
+      } catch (err) {
+        console.error("Failed to inspect show:", err);
+        CineBook.showToast("Failed to load show seats: " + err.message, "error");
+      }
+    }
+
+    function renderAdminSeatGrid(seats) {
+      const grid = document.getElementById('adminSeatGrid');
+      grid.innerHTML = '';
+
+      // Group by rowChar
+      const byRow = {};
+      seats.forEach(s => {
+        if (!byRow[s.rowChar]) byRow[s.rowChar] = [];
+        byRow[s.rowChar].push(s);
+      });
+
+      const sortedRows = Object.keys(byRow).sort();
+
+      sortedRows.forEach(rowChar => {
+        const rowDiv = document.createElement('div');
+        rowDiv.className = 'seat-row';
+
+        const label = document.createElement('div');
+        label.className = 'row-label';
+        label.textContent = rowChar;
+        rowDiv.appendChild(label);
+
+        const rowSeats = byRow[rowChar].sort((a, b) => a.seatNum - b.seatNum);
+
+        rowSeats.forEach(seat => {
+          const seatEl = document.createElement('div');
+
+          let tierClass = 'tier-regular';
+          if (seat.tier === 'PREMIUM') tierClass = 'tier-premium';
+          else if (seat.tier === 'VIP') tierClass = 'tier-vip';
+
+          let statusClass = 'admin-available';
+          if (seat.status === 'BOOKED') {
+            statusClass = 'admin-booked';
+          } else if (seat.status === 'HELD' || seat.status === 'HELD_BY_YOU') {
+            statusClass = 'admin-held';
+          }
+
+          seatEl.className = `seat ${tierClass} ${statusClass}`;
+          seatEl.textContent = seat.seatNum;
+
+          const bookedInfo = currentBookedSeatsMap[seat.seatId];
+          if (bookedInfo) {
+            seatEl.title = `Seat ${seat.seatCode} (BOOKED by ${bookedInfo.customer_name}) - Click for details`;
+          } else if (seat.status === 'HELD') {
+            seatEl.title = `Seat ${seat.seatCode} (HELD under 5-min lock) - Click for details`;
+          } else {
+            seatEl.title = `Seat ${seat.seatCode} (${seat.tier}) - Rs. ${seat.basePrice} (Available)`;
+          }
+
+          seatEl.addEventListener('click', () => openSeatModal(seat, bookedInfo));
+
+          rowDiv.appendChild(seatEl);
+        });
+
+        grid.appendChild(rowDiv);
+      });
+    }
+
+    function openSeatModal(seat, bookedInfo) {
+      const modal = document.getElementById('seatModal');
+      const title = document.getElementById('modalSeatTitle');
+      const body = document.getElementById('modalSeatBody');
+
+      title.innerHTML = `Seat <strong>${seat.seatCode}</strong> (${seat.tier})`;
+
+      if (bookedInfo) {
+        body.innerHTML = `
+          <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
+            <span class="badge badge-danger">CONFIRMED RESERVATION</span>
+            <span class="badge badge-info">${bookedInfo.booking_id}</span>
+          </div>
+          <div style="background: rgba(0,0,0,0.3); border-radius: var(--radius-md); padding: 1rem; display: flex; flex-direction: column; gap: 0.65rem; font-size: 0.9rem;">
+            <div><span style="color: var(--text-muted);">Customer Name:</span> <strong style="color: #fff;">${bookedInfo.customer_name}</strong></div>
+            <div><span style="color: var(--text-muted);">Phone Number:</span> <strong style="color: #fff;">${bookedInfo.customer_phone}</strong></div>
+            <div><span style="color: var(--text-muted);">Email Address:</span> <strong style="color: #fff;">${bookedInfo.customer_email}</strong></div>
+            <div><span style="color: var(--text-muted);">Tier &amp; Unit Price:</span> <span style="color: var(--accent-gold); font-weight: 600;">${bookedInfo.seat_tier} &bull; ${CineBook.formatCurrency(bookedInfo.unit_price)}</span></div>
+            <div><span style="color: var(--text-muted);">Booked Timestamp:</span> <span style="color: var(--text-secondary);">${CineBook.formatDateTime(bookedInfo.booking_time)}</span></div>
+          </div>
+          <div style="margin-top: 1.25rem; display: flex; justify-content: flex-end;">
+            <button class="btn btn-secondary" onclick="closeSeatModal()">Close</button>
+          </div>
+        `;
+      } else if (seat.status === 'HELD') {
+        body.innerHTML = `
+          <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
+            <span class="badge badge-warning">HELD UNDER 5-MINUTE LOCK</span>
+          </div>
+          <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1rem;">
+            This seat is currently held by a customer completing checkout. It will either become confirmed upon payment or released automatically by the DBMS stored procedure <code>sp_release_expired_holds</code>.
+          </p>
+          <div style="background: rgba(0,0,0,0.3); border-radius: var(--radius-md); padding: 1rem; font-size: 0.85rem;">
+            <div><span style="color: var(--text-muted);">Seat Tier:</span> <strong style="color: #fff;">${seat.tier}</strong></div>
+            <div><span style="color: var(--text-muted);">Base Price:</span> <strong style="color: #fff;">${CineBook.formatCurrency(seat.basePrice)}</strong></div>
+          </div>
+          <div style="margin-top: 1.25rem; display: flex; justify-content: flex-end;">
+            <button class="btn btn-secondary" onclick="closeSeatModal()">Close</button>
+          </div>
+        `;
+      } else {
+        body.innerHTML = `
+          <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem;">
+            <span class="badge badge-success">SEAT AVAILABLE</span>
+          </div>
+          <p style="color: var(--text-secondary); font-size: 0.9rem; margin-bottom: 1rem;">
+            This seat is currently vacant and open for customer booking.
+          </p>
+          <div style="background: rgba(0,0,0,0.3); border-radius: var(--radius-md); padding: 1rem; font-size: 0.85rem;">
+            <div><span style="color: var(--text-muted);">Row:</span> <strong style="color: #fff;">Row ${seat.rowChar}</strong></div>
+            <div><span style="color: var(--text-muted);">Seat Number:</span> <strong style="color: #fff;">#${seat.seatNum}</strong></div>
+            <div><span style="color: var(--text-muted);">Seat Tier:</span> <strong style="color: #fff;">${seat.tier}</strong></div>
+            <div><span style="color: var(--text-muted);">Standard Price:</span> <strong style="color: var(--accent-cyan);">${CineBook.formatCurrency(seat.basePrice)}</strong></div>
+          </div>
+          <div style="margin-top: 1.25rem; display: flex; justify-content: flex-end;">
+            <button class="btn btn-secondary" onclick="closeSeatModal()">Close</button>
+          </div>
+        `;
+      }
+
+      modal.style.display = 'flex';
+    }
+
+    function closeSeatModal(e) {
+      if (!e || e.target.id === 'seatModal') {
+        document.getElementById('seatModal').style.display = 'none';
+      }
+    }
+
+    function renderBookedSeatsTable(list) {
+      const tbody = document.getElementById('adminBookedSeatsTableBody');
+      document.getElementById('rosterCountBadge').textContent = `${list.length} Booked`;
+
+      if (list.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align: center; color: var(--text-muted); padding: 1.5rem;">No booked seats for this screening yet.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = list.map(b => {
+        const tierBadge = b.seat_tier === 'VIP' ? 'badge-warning' : b.seat_tier === 'PREMIUM' ? 'badge-purple' : 'badge-info';
+        return `
+          <tr>
+            <td><strong style="color: #fff; font-size: 0.95rem;">${b.seat_code}</strong></td>
+            <td><span class="badge ${tierBadge}" style="font-size: 0.7rem;">${b.seat_tier}</span></td>
+            <td><code style="color: var(--accent-cyan); font-weight: 600;">${b.booking_id}</code></td>
+            <td><strong>${b.customer_name}</strong></td>
+            <td>${b.customer_phone}</td>
+            <td style="color: var(--text-secondary);">${b.customer_email}</td>
+            <td style="color: var(--accent-gold); font-weight: 600;">${CineBook.formatCurrency(b.unit_price)}</td>
+            <td style="color: var(--text-muted);">${CineBook.formatDateTime(b.booking_time)}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function filterRosterTable() {
+      const q = document.getElementById('rosterSearch').value.trim().toLowerCase();
+      if (!q) {
+        renderBookedSeatsTable(currentRosterList);
+        return;
+      }
+      const filtered = currentRosterList.filter(b => 
+        b.seat_code.toLowerCase().includes(q) ||
+        b.booking_id.toLowerCase().includes(q) ||
+        b.customer_name.toLowerCase().includes(q) ||
+        b.customer_phone.includes(q) ||
+        b.customer_email.toLowerCase().includes(q)
+      );
+      renderBookedSeatsTable(filtered);
+    }
+
+    // =========================================================================
+    // TAB 2: Executive Analytics & Charts
+    // =========================================================================
     async function loadAllAnalytics() {
       try {
         await Promise.all([
@@ -184,8 +808,7 @@
           loadMovieRevenueChart(),
           loadOccupancyChart(),
           loadTopSnacksChart(),
-          loadPeakHoursChart(),
-          loadAuditLogs()
+          loadPeakHoursChart()
         ]);
       } catch (err) {
         console.error("Analytics fetch error:", err);
@@ -338,6 +961,9 @@
       });
     }
 
+    // =========================================================================
+    // TAB 3: Database Trigger Audit Trail
+    // =========================================================================
     async function loadAuditLogs() {
       const resp = await CineBook.fetchApi('/api/admin/audit-logs?limit=50');
       const logs = resp.data || [];
@@ -371,4 +997,3 @@
   </script>
 </body>
 </html>
-

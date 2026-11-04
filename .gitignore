@@ -21,3 +21,5 @@ Thumbs.db
 
 # Sensitive environment files
 .env
+run-local.bat
+run-local.ps1

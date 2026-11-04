@@ -36,6 +36,11 @@ public class ShowController {
         this.seatRecommendationService = seatRecommendationService;
     }
 
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<Show>>> getAllShows() {
+        return ResponseEntity.ok(ApiResponse.ok(showService.getAllUpcomingShows()));
+    }
+
     @GetMapping("/{showId}")
     public ResponseEntity<ApiResponse<Show>> getShowById(@PathVariable int showId) {
         return showService.getShowById(showId)
@@ -84,4 +89,3 @@ public class ShowController {
         return ResponseEntity.ok(ApiResponse.ok(recommended));
     }
 }
-
